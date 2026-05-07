@@ -1,0 +1,132 @@
+# ============================================================
+# dvc.yaml — Full ML pipeline managed by DVC
+# Stages: explore → clean → features → train_classifier →
+#          train_regressor → clustering → train_nlp →
+#          multimodal → evaluate
+# ============================================================
+
+stages:
+
+  explore:
+    cmd: python src/data/explore.py
+    deps:
+      - dataset_ProjetML_2026.csv
+      - src/data/explore.py
+    outs:
+      - reports/eda_profile.json:
+          cache: true
+    params:
+      - split.random_state
+
+  clean:
+    cmd: python src/data/clean.py
+    deps:
+      - dataset_ProjetML_2026.csv
+      - src/data/clean.py
+    outs:
+      - data/cleaned_data.csv:
+          cache: true
+    params:
+      - imputer
+
+  features:
+    cmd: python src/data/features.py
+    deps:
+      - data/cleaned_data.csv
+      - src/data/features.py
+    outs:
+      - data/train.csv:
+          cache: true
+      - data/val.csv:
+          cache: true
+      - data/test.csv:
+          cache: true
+    params:
+      - split
+
+  train_classifier:
+    cmd: python src/models/classification.py
+    deps:
+      - dataset_ProjetML_2026.csv
+      - src/models/classification.py
+    outs:
+      - models/classifier_best.pkl:
+          cache: true
+      - models/classification_artifacts:
+          cache: true
+    params:
+      - classification
+
+  train_regressor:
+    cmd: python src/models/regression.py
+    deps:
+      - dataset_ProjetML_2026.csv
+      - src/models/regression.py
+    outs:
+      - models/regressor_best.pkl:
+          cache: true
+      - models/regression_artifacts:
+          cache: true
+    params:
+      - regression
+
+  clustering:
+    cmd: python src/models/clustering.py
+    deps:
+      - dataset_ProjetML_2026.csv
+      - src/models/clustering.py
+    outs:
+      - models/kmeans_best.pkl:
+          cache: true
+      - models/clustering_artifacts:
+          cache: true
+    params:
+      - clustering
+
+  train_nlp:
+    cmd: python src/nlp/train_nlp.py
+    deps:
+      - dataset_ProjetML_2026.csv
+      - src/nlp/train_nlp.py
+      - src/nlp/preprocess.py
+      - src/nlp/vectorize.py
+    outs:
+      - models/nlp/nlp_model_best.pkl:
+          cache: true
+      - models/nlp/vectorizer_best.pkl:
+          cache: true
+      - models/nlp/label_encoder.pkl:
+          cache: true
+      - models/nlp/artifacts:
+          cache: true
+    params:
+      - nlp
+
+  multimodal:
+    cmd: python src/fusion/multimodal_pipeline.py
+    deps:
+      - dataset_ProjetML_2026.csv
+      - src/fusion/multimodal_pipeline.py
+      - src/nlp/preprocess.py
+    outs:
+      - models/fusion/multimodal_best.pkl:
+          cache: true
+      - models/fusion/artifacts:
+          cache: true
+    params:
+      - multimodal
+
+  evaluate:
+    cmd: python src/evaluation/evaluate.py
+    deps:
+      - models/classifier_best.pkl
+      - models/regressor_best.pkl
+      - models/kmeans_best.pkl
+      - models/nlp/nlp_model_best.pkl
+      - models/fusion/multimodal_best.pkl
+      - src/evaluation/evaluate.py
+    outs:
+      - reports/evaluation.json:
+          cache: true
+    params:
+      - evaluate

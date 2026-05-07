@@ -1,0 +1,74 @@
+{
+  "0": {
+    "semantic_label": "heavy / high-volume / non-conductive / transparent / rigid / low-value",
+    "size": 2675,
+    "means": {
+      "Poids": 162.7415,
+      "Volume": 340.1971,
+      "Conductivite": 0.001,
+      "Opacite": 0.1741,
+      "Rigidite": 8.8721,
+      "Prix_Revente": 5.7498
+    }
+  },
+  "1": {
+    "semantic_label": "light / low-volume / non-conductive / low-value",
+    "size": 5461,
+    "means": {
+      "Poids": 25.5147,
+      "Volume": 50.618,
+      "Conductivite": 0.0,
+      "Opacite": 0.6639,
+      "Rigidite": 3.2912,
+      "Prix_Revente": 2.3529
+    }
+  },
+  "2": {
+    "semantic_label": "high-conductivity / rigid / low-value",
+    "size": 2185,
+    "means": {
+      "Poids": 59.4226,
+      "Volume": 118.7035,
+      "Conductivite": 0.895,
+      "Opacite": 0.9638,
+      "Rigidite": 8.3927,
+      "Prix_Revente": 16.959
+    }
+  },
+  "3": {
+    "semantic_label": "heavy / high-volume / non-conductive / transparent / high-value",
+    "size": 52,
+    "means": {
+      "Poids": 156.479,
+      "Volume": 269.0615,
+      "Conductivite": 0.0,
+      "Opacite": 0.3799,
+      "Rigidite": 6.7115,
+      "Prix_Revente": 9999.0
+    }
+  },
+  "4": {
+    "semantic_label": "heavy / high-volume / non-conductive / high-opacity / rigid / low-value",
+    "size": 31,
+    "means": {
+      "Poids": 1834.9224,
+      "Volume": 353.4063,
+      "Conductivite": 0.0,
+      "Opacite": 1.8925,
+      "Rigidite": 9.0968,
+      "Prix_Revente": 5.4105
+    }
+  },
+  "5": {
+    "semantic_label": "high-opacity / low-value",
+    "size": 96,
+    "means": {
+      "Poids": 79.3057,
+      "Volume": 157.3304,
+      "Conductivite": 0.1169,
+      "Opacite": 55.0,
+      "Rigidite": 6.6667,
+      "Prix_Revente": 6.0902
+    }
+  }
+}

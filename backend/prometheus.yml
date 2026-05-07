@@ -1,0 +1,14 @@
+# prometheus.yml — Scrape config for Eco-Smart Classifier API
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "eco-smart-api"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          app: "eco-smart-classifier"
+          env: "production"

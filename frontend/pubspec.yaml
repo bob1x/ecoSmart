@@ -1,0 +1,47 @@
+name: ecosmart_classifier
+description: "EcoSmart Classifier — waste classification mobile app"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Routing
+  go_router: ^14.6.1
+
+  # State management
+  provider: ^6.1.2
+
+  # Networking
+  http: ^1.2.2
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # SVG icons
+  flutter_svg: ^2.0.10+1
+
+  # Charts
+  fl_chart: ^0.70.2
+
+  # Local persistence
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Formatting
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/

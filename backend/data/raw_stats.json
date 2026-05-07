@@ -1,0 +1,314 @@
+{
+  "shape": {
+    "rows": 10500,
+    "cols": 12
+  },
+  "dtypes": {
+    "Poids": "float64",
+    "Volume": "float64",
+    "Conductivite": "float64",
+    "Opacite": "float64",
+    "Rigidite": "float64",
+    "Prix_Revente": "float64",
+    "Categorie": "str",
+    "Source": "str",
+    "Rapport_Collecte": "str",
+    "is_outlier_iqr": "bool",
+    "is_outlier_zscore": "bool",
+    "is_outlier_any": "bool"
+  },
+  "describe_numeric": {
+    "Poids": {
+      "count": 9471.0,
+      "mean": 77.79650080924947,
+      "std": 127.84743345454426,
+      "min": -99.0,
+      "25%": 19.75153795986788,
+      "50%": 39.19302869707755,
+      "75%": 130.49756110905753,
+      "max": 2334.218831443567
+    },
+    "Volume": {
+      "count": 9960.0,
+      "mean": 144.40807894801304,
+      "std": 136.3842162058835,
+      "min": -26.80771241307457,
+      "25%": 44.43689652141482,
+      "50%": 88.08421669980203,
+      "75%": 240.2000227480233,
+      "max": 554.1069690245591
+    },
+    "Conductivite": {
+      "count": 9483.0,
+      "mean": 0.20767429795026562,
+      "std": 0.3789335708007967,
+      "min": 0.0,
+      "25%": 0.0,
+      "50%": 0.0,
+      "75%": 0.0,
+      "max": 0.9993748503691896
+    },
+    "Opacite": {
+      "count": 9465.0,
+      "mean": 1.1603881657937873,
+      "std": 5.492723189112208,
+      "min": 3.730563413262278e-05,
+      "25%": 0.1964099074031925,
+      "50%": 0.553483867864301,
+      "75%": 1.0,
+      "max": 55.0
+    },
+    "Rigidite": {
+      "count": 9942.0,
+      "mean": 5.8866425266545965,
+      "std": 3.087224847754284,
+      "min": 1.0,
+      "25%": 3.0,
+      "50%": 5.0,
+      "75%": 9.0,
+      "max": 10.0
+    },
+    "Prix_Revente": {
+      "count": 9964.0,
+      "mean": 58.58785650472302,
+      "std": 720.0590893432677,
+      "min": -50.0,
+      "25%": 1.3936229943908196,
+      "50%": 4.135356069871986,
+      "75%": 6.781633848006794,
+      "max": 9999.0
+    }
+  },
+  "missing_values": {
+    "Poids": {
+      "count": 1029,
+      "pct": 9.8
+    },
+    "Volume": {
+      "count": 540,
+      "pct": 5.14
+    },
+    "Conductivite": {
+      "count": 1017,
+      "pct": 9.69
+    },
+    "Opacite": {
+      "count": 1035,
+      "pct": 9.86
+    },
+    "Rigidite": {
+      "count": 558,
+      "pct": 5.31
+    },
+    "Prix_Revente": {
+      "count": 536,
+      "pct": 5.1
+    },
+    "Categorie": {
+      "count": 514,
+      "pct": 4.9
+    },
+    "Source": {
+      "count": 536,
+      "pct": 5.1
+    },
+    "Rapport_Collecte": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "is_outlier_iqr": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "is_outlier_zscore": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "is_outlier_any": {
+      "count": 0,
+      "pct": 0.0
+    }
+  },
+  "mcar_analysis": {
+    "Poids": {
+      "n_missing": 1029,
+      "pct_missing": 9.8,
+      "classification": "MAR",
+      "significant_cols": [
+        [
+          "Volume",
+          0.0004
+        ],
+        [
+          "Conductivite",
+          0.001352
+        ],
+        [
+          "Prix_Revente",
+          0.000364
+        ]
+      ],
+      "comment": "Significant mean differences detected in ['Volume', 'Conductivite', 'Prix_Revente'] when 'Poids' is missing vs. present → missingness likely depends on observed data (MAR). Note: could be MNAR if the value is missing BECAUSE of its own magnitude (e.g., sensor saturation). Domain inspection recommended."
+    },
+    "Volume": {
+      "n_missing": 540,
+      "pct_missing": 5.14,
+      "classification": "MCAR",
+      "significant_cols": [],
+      "comment": "No significant mean differences found in other numeric columns when 'Volume' is missing vs. present → missingness appears independent of observed data (MCAR)."
+    },
+    "Conductivite": {
+      "n_missing": 1017,
+      "pct_missing": 9.69,
+      "classification": "MAR",
+      "significant_cols": [
+        [
+          "Prix_Revente",
+          0.000457
+        ]
+      ],
+      "comment": "Significant mean differences detected in ['Prix_Revente'] when 'Conductivite' is missing vs. present → missingness likely depends on observed data (MAR). Note: could be MNAR if the value is missing BECAUSE of its own magnitude (e.g., sensor saturation). Domain inspection recommended."
+    },
+    "Opacite": {
+      "n_missing": 1035,
+      "pct_missing": 9.86,
+      "classification": "MAR",
+      "significant_cols": [
+        [
+          "Poids",
+          0.000179
+        ],
+        [
+          "Conductivite",
+          0.000982
+        ],
+        [
+          "Rigidite",
+          0.017345
+        ]
+      ],
+      "comment": "Significant mean differences detected in ['Poids', 'Conductivite', 'Rigidite'] when 'Opacite' is missing vs. present → missingness likely depends on observed data (MAR). Note: could be MNAR if the value is missing BECAUSE of its own magnitude (e.g., sensor saturation). Domain inspection recommended."
+    },
+    "Rigidite": {
+      "n_missing": 558,
+      "pct_missing": 5.31,
+      "classification": "MCAR",
+      "significant_cols": [],
+      "comment": "No significant mean differences found in other numeric columns when 'Rigidite' is missing vs. present → missingness appears independent of observed data (MCAR)."
+    },
+    "Prix_Revente": {
+      "n_missing": 536,
+      "pct_missing": 5.1,
+      "classification": "MCAR",
+      "significant_cols": [],
+      "comment": "No significant mean differences found in other numeric columns when 'Prix_Revente' is missing vs. present → missingness appears independent of observed data (MCAR)."
+    },
+    "Categorie": {
+      "n_missing": 514,
+      "pct_missing": 4.9,
+      "classification": "MCAR",
+      "significant_cols": [],
+      "comment": "No significant mean differences found in other numeric columns when 'Categorie' is missing vs. present → missingness appears independent of observed data (MCAR)."
+    },
+    "Source": {
+      "n_missing": 536,
+      "pct_missing": 5.1,
+      "classification": "MCAR",
+      "significant_cols": [],
+      "comment": "No significant mean differences found in other numeric columns when 'Source' is missing vs. present → missingness appears independent of observed data (MCAR)."
+    }
+  },
+  "outlier_detection": {
+    "iqr_method": {
+      "Poids": {
+        "Q1": 19.7515,
+        "Q3": 130.4976,
+        "IQR": 110.746,
+        "lower_bound": -146.3675,
+        "upper_bound": 296.6166,
+        "n_outliers": 61,
+        "pct_outliers": 0.58
+      },
+      "Volume": {
+        "Q1": 44.4369,
+        "Q3": 240.2,
+        "IQR": 195.7631,
+        "lower_bound": -249.2078,
+        "upper_bound": 533.8447,
+        "n_outliers": 12,
+        "pct_outliers": 0.11
+      },
+      "Conductivite": {
+        "Q1": 0.0,
+        "Q3": 0.0,
+        "IQR": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "n_outliers": 2200,
+        "pct_outliers": 20.95
+      },
+      "Opacite": {
+        "Q1": 0.1964,
+        "Q3": 1.0,
+        "IQR": 0.8036,
+        "lower_bound": -1.009,
+        "upper_bound": 2.2054,
+        "n_outliers": 97,
+        "pct_outliers": 0.92
+      },
+      "Rigidite": {
+        "Q1": 3.0,
+        "Q3": 9.0,
+        "IQR": 6.0,
+        "lower_bound": -6.0,
+        "upper_bound": 18.0,
+        "n_outliers": 0,
+        "pct_outliers": 0.0
+      },
+      "Prix_Revente": {
+        "Q1": 1.3936,
+        "Q3": 6.7816,
+        "IQR": 5.388,
+        "lower_bound": -6.6884,
+        "upper_bound": 14.8637,
+        "n_outliers": 1734,
+        "pct_outliers": 16.51
+      }
+    },
+    "zscore_method": {
+      "Poids": {
+        "z_threshold": 3,
+        "n_outliers": 48,
+        "pct_outliers": 0.46
+      },
+      "Volume": {
+        "z_threshold": 3,
+        "n_outliers": 12,
+        "pct_outliers": 0.11
+      },
+      "Conductivite": {
+        "z_threshold": 3,
+        "n_outliers": 0,
+        "pct_outliers": 0.0
+      },
+      "Opacite": {
+        "z_threshold": 3,
+        "n_outliers": 97,
+        "pct_outliers": 0.92
+      },
+      "Rigidite": {
+        "z_threshold": 3,
+        "n_outliers": 0,
+        "pct_outliers": 0.0
+      },
+      "Prix_Revente": {
+        "z_threshold": 3,
+        "n_outliers": 52,
+        "pct_outliers": 0.5
+      }
+    },
+    "total_flagged_iqr": 2560,
+    "total_flagged_zscore": 207,
+    "total_flagged_any": 2560
+  }
+}

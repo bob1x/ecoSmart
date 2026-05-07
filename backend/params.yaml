@@ -1,0 +1,59 @@
+# ============================================================
+# params.yaml — Centralised hyperparameters for DVC pipeline
+# ============================================================
+
+imputer:
+  type: median        # median | mean | knn
+  k: 5                # neighbours for KNN imputer (if type=knn)
+
+split:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  random_state: 42
+  stratify: Categorie
+
+classification:
+  n_estimators: 200
+  max_depth: 15
+  optuna_trials: 50
+  models:
+    - RandomForest
+    - GradientBoosting
+    - XGBoost
+    - LightGBM
+    - LogisticRegression
+
+regression:
+  n_estimators: 200
+  models:
+    - Ridge
+    - RandomForest
+    - XGBoost
+    - LightGBM
+
+nlp:
+  vectorizer_type: tfidf   # tfidf | bow | word2vec | fasttext
+  max_features: 5000
+  ngram_range: [1, 2]
+  test_size: 0.20
+
+clustering:
+  k_min: 2
+  k_max: 10
+  features:
+    - Poids
+    - Volume
+    - Conductivite
+    - Opacite
+    - Rigidite
+    - Prix_Revente
+
+multimodal:
+  nlp_weight: 1.0
+  tfidf_max_features: 5000
+  tfidf_ngram_range: [1, 2]
+
+evaluate:
+  min_accuracy: 0.70
+  min_f1: 0.70
