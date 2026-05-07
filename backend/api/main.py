@@ -134,20 +134,40 @@ def load_all_models():
 
 
 # ──────────────────────── Preprocessing ────────────────
-# Classification label classes (same order as training)
+# Classification label classes (same order as training LabelEncoder)
 CATEGORIES = ["Métal", "Papier", "Plastique", "Verre"]
 
+# French stopwords (no spacy dependency)
+_FR_STOPWORDS = {
+    "le", "la", "les", "de", "du", "des", "un", "une", "et", "en",
+    "à", "au", "aux", "est", "son", "sa", "ses", "que", "qui", "dans",
+    "sur", "par", "pour", "avec", "ce", "il", "elle", "nous", "vous",
+    "ils", "se", "ne", "pas", "plus", "très", "tout", "ou", "mais",
+    "donc", "car", "ni", "si", "comme", "ont", "été", "être", "avoir",
+    "fait", "peut", "cette", "ces", "mon", "ton", "leur", "notre",
+    "votre", "quel", "quoi", "dont", "y", "là", "ici", "entre",
+    "avant", "après", "sans", "sous", "vers", "chez", "depuis",
+    "encore", "aussi", "bien", "mal", "peu", "trop", "assez",
+    # Domain-specific
+    "dechet", "collecte", "rapport", "materiau", "echantillon", "lot",
+    "site", "non", "renseigne", "poids", "volume",
+}
 
-def build_features_for_model(inp: NumericInput, feature_names: list) -> pd.DataFrame:
+
+def build_features_for_model(
+    inp: NumericInput,
+    feature_names: list,
+    prix_revente: float = 0.0,
+) -> pd.DataFrame:
     """Build a feature DataFrame that exactly matches the model's training schema.
 
     Dynamically reads feature_names_in_ from the model and fills in:
     - numeric values from the input
     - one-hot encoded Source columns
+    - Prix_Revente from the provided estimate
     - any other columns default to 0
     """
     row = {}
-    # Map input fields to column names
     input_values = {
         "Poids": inp.Poids,
         "Volume": inp.Volume,
@@ -159,24 +179,76 @@ def build_features_for_model(inp: NumericInput, feature_names: list) -> pd.DataF
     for feat in feature_names:
         if feat in input_values:
             row[feat] = input_values[feat]
+        elif feat == "Prix_Revente":
+            row[feat] = prix_revente
         elif feat.startswith("Source_"):
             source_val = feat.replace("Source_", "")
             row[feat] = 1.0 if inp.Source == source_val else 0.0
         else:
-            # Columns like Prix_Revente — set to 0 (the model was trained with it
-            # but for classification we don't have it at prediction time)
             row[feat] = 0.0
 
     return pd.DataFrame([row])[feature_names]  # enforce column order
 
 
-def preprocess_text(text: str):
-    """Preprocess text for NLP prediction."""
-    # Lazy import to avoid loading spaCy at module level
-    sys.path.insert(0, ROOT)
-    from src.nlp.preprocess import preprocess as preprocess_fn
+def _estimate_prix(inp: NumericInput) -> float:
+    """Estimate Prix_Revente using the regressor with uniform category prior.
 
-    tokens = preprocess_fn(text)
+    Since we don't know the category yet, we average the price prediction
+    across all categories (uniform prior) to get a fair estimate.
+    """
+    reg = models["regressor"]
+    reg_feats = models.get("reg_features")
+    if not reg_feats:
+        return 0.0
+
+    input_values = {
+        "Poids": inp.Poids,
+        "Volume": inp.Volume,
+        "Conductivite": inp.Conductivite,
+        "Opacite": inp.Opacite,
+        "Rigidite": inp.Rigidite,
+    }
+
+    prices = []
+    for cat in CATEGORIES:
+        reg_row = {}
+        for feat in reg_feats:
+            if feat in input_values:
+                reg_row[feat] = input_values[feat]
+            elif feat.startswith("Categorie_"):
+                cat_val = feat.replace("Categorie_", "")
+                reg_row[feat] = 1.0 if cat == cat_val else 0.0
+            elif feat.startswith("Source_"):
+                src_val = feat.replace("Source_", "")
+                reg_row[feat] = 1.0 if inp.Source == src_val else 0.0
+            else:
+                reg_row[feat] = 0.0
+        X_reg = pd.DataFrame([reg_row])[reg_feats]
+        prices.append(float(reg.predict(X_reg)[0]))
+
+    return float(np.mean(prices))
+
+
+def preprocess_text(text: str) -> str:
+    """Lightweight text preprocessing — no spacy dependency.
+
+    Steps: lowercase → remove punctuation/digits → remove stopwords → join.
+    """
+    import re
+
+    if not isinstance(text, str) or not text.strip():
+        return ""
+
+    text = text.lower()
+    text = re.sub(r"[^\w\s]", " ", text)   # punctuation → space
+    text = re.sub(r"\d+", " ", text)        # digits → space
+    text = re.sub(r"\s+", " ", text).strip()
+
+    tokens = [
+        w for w in text.split()
+        if len(w) > 1 and w not in _FR_STOPWORDS
+    ]
+
     return " ".join(tokens)
 
 
@@ -223,15 +295,23 @@ async def health():
 
 @app.post("/predict/numeric", response_model=NumericOutput)
 async def predict_numeric(inp: NumericInput):
-    """Predict category and resale price from numeric features."""
+    """Predict category and resale price from numeric features.
+
+    Uses a 2-pass approach:
+    1. Estimate Prix_Revente with uniform category prior
+    2. Use estimated price as a feature for classification
+    """
     try:
-        # Classification
         clf = models["classifier"]
         clf_feats = models.get("clf_features")
+
+        # Pass 1: estimate Prix_Revente
+        estimated_prix = _estimate_prix(inp)
+
+        # Pass 2: classify with estimated price
         if clf_feats:
-            X = build_features_for_model(inp, clf_feats)
+            X = build_features_for_model(inp, clf_feats, prix_revente=estimated_prix)
         else:
-            # Fallback: build minimal features
             X = pd.DataFrame([{
                 "Poids": inp.Poids, "Volume": inp.Volume,
                 "Conductivite": inp.Conductivite, "Opacite": inp.Opacite,
@@ -248,11 +328,10 @@ async def predict_numeric(inp: NumericInput):
 
         categorie = CATEGORIES[pred_idx] if pred_idx < len(CATEGORIES) else str(pred_idx)
 
-        # Regression
+        # Final regression with the predicted category for accurate price
         reg = models["regressor"]
         reg_feats = models.get("reg_features")
         if reg_feats:
-            # Build regression features dynamically
             reg_row = {}
             input_values = {
                 "Poids": inp.Poids, "Volume": inp.Volume,
@@ -336,7 +415,6 @@ async def predict_text(inp: TextInput):
 async def predict_multimodal(inp: MultimodalInput):
     """Predict category, price, confidence and cluster from all features."""
     try:
-        # Reuse numeric prediction logic
         numeric_inp = NumericInput(
             Poids=inp.Poids,
             Volume=inp.Volume,
@@ -346,11 +424,14 @@ async def predict_multimodal(inp: MultimodalInput):
             Source=inp.Source,
         )
 
-        # Classification
+        # Pass 1: estimate Prix_Revente
+        estimated_prix = _estimate_prix(numeric_inp)
+
+        # Pass 2: classify with estimated price
         clf = models["classifier"]
         clf_feats = models.get("clf_features")
         if clf_feats:
-            X = build_features_for_model(numeric_inp, clf_feats)
+            X = build_features_for_model(numeric_inp, clf_feats, prix_revente=estimated_prix)
         else:
             X = pd.DataFrame([{
                 "Poids": inp.Poids, "Volume": inp.Volume,

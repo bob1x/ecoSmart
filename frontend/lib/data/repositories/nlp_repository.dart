@@ -74,8 +74,8 @@ class NlpRepository {
 
     final words = text
         .toLowerCase()
-        .replaceAll(RegExp(r"[^\w\s']"), ' ')
-        .split(RegExp(r'\s+'))
+        .replaceAll(RegExp("[^\\w\\s']"), ' ')
+        .split(RegExp('\\s+'))
         .where((w) => w.length > 3 && !stopwords.contains(w))
         .toList();
 
