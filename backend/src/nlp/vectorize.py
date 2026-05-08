@@ -23,13 +23,11 @@ from gensim.models import Word2Vec, FastText as FTModel
 
 warnings.filterwarnings("ignore")
 
-# -- paths
 ROOT       = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 RAW_CSV    = os.path.join(ROOT, "dataset_ProjetML_2026.csv")
 NLP_DIR    = os.path.join(ROOT, "models", "nlp")
 os.makedirs(NLP_DIR, exist_ok=True)
 
-# add project root so we can import src.nlp.preprocess
 sys.path.insert(0, ROOT)
 from src.nlp.preprocess import preprocess_series
 
@@ -37,7 +35,7 @@ RANDOM_STATE = 42
 TEST_SIZE    = 0.20
 
 
-# ------------------------------------------------ data
+# data
 def load_data():
     df = pd.read_csv(RAW_CSV)
     df.dropna(subset=["Categorie", "Rapport_Collecte"], inplace=True)
@@ -46,7 +44,7 @@ def load_data():
     return texts, labels
 
 
-# ----------------------------------------------- gensim helpers
+# helpers
 def mean_pool(model, tokens, dim):
     """Mean-pool word vectors for a document."""
     vecs = []
@@ -68,7 +66,6 @@ def build_gensim_vectors(token_lists, ModelClass, dim=100, window=5, min_count=2
     return X, model
 
 
-# ================================================================ main
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     print("=" * 60)
