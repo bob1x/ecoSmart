@@ -89,7 +89,7 @@ class _PredictionBodyState extends State<_PredictionBody> {
                     const SizedBox(height: 12),
                     FeatureSlider(label: 'Conductivité', unit: '', value: _vm.conductivite, min: 0, max: 1, divisions: 100, decimalPlaces: 2, onChanged: _vm.onConductiviteChanged),
                     const SizedBox(height: 12),
-                    FeatureSlider(label: 'Opacité', unit: '', value: _vm.opacite, min: 0, max: 100, divisions: 100, onChanged: _vm.onOpaciteChanged),
+                    FeatureSlider(label: 'Opacité', unit: '', value: _vm.opacite, min: 0, max: 100, divisions: 1000, decimalPlaces: 1, onChanged: _vm.onOpaciteChanged),
                     const SizedBox(height: 12),
                     FeatureSlider(label: 'Rigidité', unit: '', value: _vm.rigidite, min: 1, max: 10, divisions: 90, onChanged: _vm.onRigiditeChanged),
                     const SizedBox(height: 8),

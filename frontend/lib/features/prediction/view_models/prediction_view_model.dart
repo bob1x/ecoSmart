@@ -13,7 +13,7 @@ class PredictionViewModel extends ChangeNotifier {
   double poids = 47.0;
   double volume = 65.0;
   double conductivite = 0.0;
-  double opacite = 1.0;
+  double opacite = 0.5;
   double rigidite = 3.0;
   String selectedSource = 'Usine_A';
   bool multimodalEnabled = false;
