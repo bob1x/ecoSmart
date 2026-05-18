@@ -40,20 +40,25 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (ctx) => DashboardViewModel(
             repository: ctx.read<DashboardRepository>(),
+            apiService: ctx.read<ApiService>(),
           ),
         ),
         ChangeNotifierProvider(
           create: (ctx) => PredictionViewModel(
             repository: ctx.read<PredictionRepository>(),
+            apiService: ctx.read<ApiService>(),
           ),
         ),
         ChangeNotifierProvider(
           create: (ctx) => NlpViewModel(
             repository: ctx.read<NlpRepository>(),
+            apiService: ctx.read<ApiService>(),
           ),
         ),
         ChangeNotifierProvider(
-          create: (_) => MlopsViewModel(),
+          create: (ctx) => MlopsViewModel(
+            apiService: ctx.read<ApiService>(),
+          ),
         ),
       ],
       child: const EcoSmartApp(),

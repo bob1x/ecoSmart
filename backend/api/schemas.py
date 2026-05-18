@@ -3,7 +3,7 @@ api/schemas.py — Pydantic v2 models for all API endpoints
 ==========================================================
 """
 
-from typing import Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -106,6 +106,13 @@ class NumericOutput(BaseModel):
         ge=0,
         le=1,
     )
+    eco_score: int = Field(
+        ...,
+        description="Composite recyclability score (0-100)",
+        examples=[78],
+        ge=0,
+        le=100,
+    )
 
 
 class TextOutput(BaseModel):
@@ -123,6 +130,18 @@ class TextOutput(BaseModel):
         ge=0,
         le=1,
     )
+    eco_score: int = Field(
+        ...,
+        description="Composite recyclability score (0-100)",
+        examples=[85],
+        ge=0,
+        le=100,
+    )
+    top_keywords: List[str] = Field(
+        default_factory=list,
+        description="Top 5 tokens that contributed most to the prediction",
+        examples=[["plastique", "rigide", "usine", "transparent", "léger"]],
+    )
 
 
 class MultimodalOutput(BaseModel):
@@ -137,6 +156,13 @@ class MultimodalOutput(BaseModel):
         examples=[2],
         ge=0,
     )
+    eco_score: int = Field(
+        ...,
+        description="Composite recyclability score (0-100)",
+        examples=[72],
+        ge=0,
+        le=100,
+    )
 
 
 class HealthResponse(BaseModel):
@@ -147,4 +173,33 @@ class HealthResponse(BaseModel):
         ...,
         description="Version string of the deployed models",
         examples=["1.0.0"],
+    )
+
+
+# ──────────────────────── Feedback ──────────────────────────────
+
+
+class FeedbackInput(BaseModel):
+    """User correction for a prediction."""
+
+    predicted_label: str = Field(
+        ..., description="The label the model predicted", examples=["Verre"]
+    )
+    correct_label: str = Field(
+        ..., description="The correct label from the user", examples=["Plastique"]
+    )
+
+
+class FeedbackStats(BaseModel):
+    """Aggregated feedback statistics."""
+
+    total_feedback: int = Field(..., examples=[42])
+    corrections: int = Field(
+        ..., description="Number of times the user corrected the model", examples=[5]
+    )
+    accuracy_rate: float = Field(
+        ..., description="1 - (corrections / total)", examples=[0.88]
+    )
+    per_class: Dict[str, int] = Field(
+        ..., description="Correction count per predicted class"
     )

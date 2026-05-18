@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_fonts.dart';
+import '../../../data/services/api_service.dart';
+import '../../../shared/widgets/eco_card.dart';
 import '../models/mlops_models.dart';
 import '../view_models/mlops_view_model.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 class ExperimentsPage extends StatelessWidget {
   const ExperimentsPage({super.key});
@@ -12,6 +16,8 @@ class ExperimentsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<MlopsViewModel>();
+    final api = context.read<ApiService>();
+
     return SafeArea(
       bottom: false,
       child: SingleChildScrollView(
@@ -59,7 +65,114 @@ class ExperimentsPage extends StatelessWidget {
                     color: AppColors.inkTertiary, letterSpacing: 1.5)),
             const SizedBox(height: 12),
             ...vm.runs.map((run) => _RunLogItem(run: run)),
+            const SizedBox(height: 20),
+
+            // ── Export buttons ──────────────────────────────────
+            Text('EXPORTS',
+                style: TextStyle(fontFamily: AppFonts.inter, fontSize: 11, fontWeight: FontWeight.w600,
+                    color: AppColors.inkTertiary, letterSpacing: 1.5)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _ExportButton(
+                    icon: Icons.table_chart_outlined,
+                    label: 'Exporter CSV',
+                    subtitle: 'Données feedback',
+                    color: AppColors.ecoGreen,
+                    onTap: () {
+                      final url = api.getExportUrl('/export/feedback');
+                      html.window.open(url, '_blank');
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ExportButton(
+                    icon: Icons.picture_as_pdf_outlined,
+                    label: 'Rapport PDF',
+                    subtitle: 'Performance modèles',
+                    color: AppColors.errorRed,
+                    onTap: () {
+                      final url = api.getExportUrl('/export/report');
+                      html.window.open(url, '_blank');
+                    },
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Export Button ────────────────────────────────────────────────
+class _ExportButton extends StatelessWidget {
+  const _ExportButton({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withAlpha(12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withAlpha(40)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: AppFonts.inter,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.inkPrimary,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontFamily: AppFonts.inter,
+                      fontSize: 9,
+                      color: AppColors.inkTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.download_rounded, size: 16, color: color),
           ],
         ),
       ),

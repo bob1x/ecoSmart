@@ -2,12 +2,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../../data/models/prediction_result.dart';
 import '../../../data/repositories/prediction_repository.dart';
+import '../../../data/services/api_service.dart';
 
 class PredictionViewModel extends ChangeNotifier {
-  PredictionViewModel({required PredictionRepository repository})
-      : _repository = repository;
+  PredictionViewModel({
+    required PredictionRepository repository,
+    required ApiService apiService,
+  })  : _repository = repository,
+        _apiService = apiService;
 
   final PredictionRepository _repository;
+  final ApiService _apiService;
 
   // ── Slider state ────────────────────────────────────────────
   double poids = 47.0;
@@ -29,11 +34,14 @@ class PredictionViewModel extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
+  // ── Feedback state ───────────────────────────────────────────
+  bool _feedbackSubmitted = false;
+  bool get feedbackSubmitted => _feedbackSubmitted;
+
   // ── Sources ──────────────────────────────────────────────────
   static const sources = ['Usine_A', 'Usine_B', 'Centre_Tri', 'Unknown'];
 
   // ── Slider change handlers ───────────────────────────────────
-  // Only update state + rebuild UI, do NOT auto-call API
   void onPoidsChanged(double v) {
     poids = v;
     notifyListeners();
@@ -78,6 +86,8 @@ class PredictionViewModel extends ChangeNotifier {
   Future<void> predict() async {
     _isLoading = true;
     _error = null;
+    _feedbackSubmitted = false;
+    _contributions = null;
     notifyListeners();
 
     try {
@@ -101,11 +111,52 @@ class PredictionViewModel extends ChangeNotifier {
           source: selectedSource,
         );
       }
+      // Auto-fetch explanation after successful prediction
+      _fetchExplain();
     } catch (e) {
       _error = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  // ── SHAP Explain ───────────────────────────────────────────
+  List<Map<String, dynamic>>? _contributions;
+  List<Map<String, dynamic>>? get contributions => _contributions;
+
+  Future<void> _fetchExplain() async {
+    try {
+      final json = await _apiService.explainPrediction(
+        poids: poids,
+        volume: volume,
+        conductivite: conductivite,
+        opacite: opacite,
+        rigidite: rigidite,
+        source: selectedSource,
+      );
+      final raw = json['contributions'] as List<dynamic>?;
+      if (raw != null) {
+        _contributions = raw.cast<Map<String, dynamic>>();
+        notifyListeners();
+      }
+    } catch (_) {
+      // Non-critical — don't block the prediction flow
+    }
+  }
+
+  // ── Feedback ────────────────────────────────────────────────
+  Future<void> submitFeedback(String correctLabel) async {
+    if (_result == null || _feedbackSubmitted) return;
+    try {
+      await _apiService.submitFeedback(
+        predictedLabel: _result!.categorie,
+        correctLabel: correctLabel,
+      );
+      _feedbackSubmitted = true;
+      notifyListeners();
+    } catch (_) {
+      // Silently fail — don't interrupt UX for feedback
     }
   }
 }

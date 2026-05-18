@@ -1,262 +1,35 @@
 """
-api/main.py — FastAPI application for Eco-Smart Classifier
-============================================================
-Endpoints:
-  POST /predict/numeric    → categorie + prix_revente + confidence
-  POST /predict/text       → categorie + confidence
-  POST /predict/multimodal → categorie + prix_revente + confidence + cluster_id
-  GET  /health             → status + model_version
-  GET  /metrics            → Prometheus metrics
+api/main.py — FastAPI application entry point
+================================================
+Slim orchestrator: creates the app, registers middleware, and mounts routers.
+All business logic lives in api/services.py, model loading in api/models.py,
+and endpoints in api/routes/*.
 """
 
-import os
-import sys
-import pickle
 import warnings
 from contextlib import asynccontextmanager
-from typing import Any, Dict
 
-import numpy as np
-import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from api.schemas import (
-    HealthResponse,
-    MultimodalInput,
-    MultimodalOutput,
-    NumericInput,
-    NumericOutput,
-    TextInput,
-    TextOutput,
-)
+from api.models import MODEL_VERSION, load_all_models, models
+from api.schemas import HealthResponse
+from api.services import init_feedback_db
+from api.routes.predict import router as predict_router
+from api.routes.feedback import router as feedback_router
+from api.routes.export import router as export_router
+from api.routes.mlops import router as mlops_router
 
 warnings.filterwarnings("ignore")
-
-# ──────────────────────── Paths ────────────────────────
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-MODELS_DIR = os.path.join(ROOT, "models")
-
-# ──────────────────────── Global model store ───────────
-models: Dict[str, Any] = {}
-
-MODEL_VERSION = "1.0.0"
-
-
-# ──────────────────────── Helpers ──────────────────────
-def load_pickle(path: str):
-    """Load a pickle file."""
-    with open(path, "rb") as f:
-        return pickle.load(f)
-
-
-def try_mlflow_or_pkl(registry_name: str, pkl_path: str):
-    """Try loading from MLflow Model Registry, fall back to .pkl."""
-    try:
-        import mlflow
-
-        tracking_db = (
-            "sqlite:///" + os.path.join(ROOT, "mlruns.db").replace("\\", "/")
-        )
-        mlflow.set_tracking_uri(tracking_db)
-        model_uri = f"models:/{registry_name}/latest"
-        model = mlflow.sklearn.load_model(model_uri)
-        print(f"  [OK] Loaded '{registry_name}' from MLflow Registry")
-        return model
-    except Exception:
-        if os.path.exists(pkl_path):
-            model = load_pickle(pkl_path)
-            print(f"  [OK] Loaded from pkl: {pkl_path}")
-            return model
-        raise FileNotFoundError(
-            f"No model found in registry '{registry_name}' or at '{pkl_path}'"
-        )
-
-
-def load_all_models():
-    """Load all models at startup."""
-    print("Loading models...")
-
-    # Classifier
-    models["classifier"] = try_mlflow_or_pkl(
-        "waste-classifier",
-        os.path.join(MODELS_DIR, "classifier_best.pkl"),
-    )
-
-    # Read feature names from the classifier for dynamic feature building
-    clf = models["classifier"]
-    if hasattr(clf, "feature_names_in_"):
-        models["clf_features"] = list(clf.feature_names_in_)
-        print(f"  Classifier features: {len(models['clf_features'])} cols")
-    else:
-        models["clf_features"] = None
-
-    # Regressor
-    models["regressor"] = try_mlflow_or_pkl(
-        "waste-regressor",
-        os.path.join(MODELS_DIR, "regressor_best.pkl"),
-    )
-
-    # Read regressor feature names
-    reg = models["regressor"]
-    if hasattr(reg, "feature_names_in_"):
-        models["reg_features"] = list(reg.feature_names_in_)
-        print(f"  Regressor features: {len(models['reg_features'])} cols")
-    else:
-        models["reg_features"] = None
-
-    # KMeans
-    models["kmeans"] = load_pickle(
-        os.path.join(MODELS_DIR, "kmeans_best.pkl")
-    )
-    print(f"  [OK] Loaded KMeans (k={models['kmeans'].n_clusters})")
-
-    # NLP model + vectorizer
-    nlp_dir = os.path.join(MODELS_DIR, "nlp")
-    models["nlp_info"] = load_pickle(
-        os.path.join(nlp_dir, "nlp_model_best.pkl")
-    )
-    models["nlp_vectorizer"] = load_pickle(
-        os.path.join(nlp_dir, "vectorizer_best.pkl")
-    )
-    models["nlp_label_encoder"] = load_pickle(
-        os.path.join(nlp_dir, "label_encoder.pkl")
-    )
-    print(f"  [OK] Loaded NLP model: {models['nlp_info']['name']}")
-
-    # Multimodal
-    models["multimodal"] = load_pickle(
-        os.path.join(MODELS_DIR, "fusion", "multimodal_best.pkl")
-    )
-    print(f"  [OK] Loaded multimodal: {models['multimodal']['label']}")
-
-    print("All models loaded [OK]")
-
-
-# ──────────────────────── Preprocessing ────────────────
-# Classification label classes (same order as training LabelEncoder)
-CATEGORIES = ["Métal", "Papier", "Plastique", "Verre"]
-
-# French stopwords (no spacy dependency)
-_FR_STOPWORDS = {
-    "le", "la", "les", "de", "du", "des", "un", "une", "et", "en",
-    "à", "au", "aux", "est", "son", "sa", "ses", "que", "qui", "dans",
-    "sur", "par", "pour", "avec", "ce", "il", "elle", "nous", "vous",
-    "ils", "se", "ne", "pas", "plus", "très", "tout", "ou", "mais",
-    "donc", "car", "ni", "si", "comme", "ont", "été", "être", "avoir",
-    "fait", "peut", "cette", "ces", "mon", "ton", "leur", "notre",
-    "votre", "quel", "quoi", "dont", "y", "là", "ici", "entre",
-    "avant", "après", "sans", "sous", "vers", "chez", "depuis",
-    "encore", "aussi", "bien", "mal", "peu", "trop", "assez",
-    # Domain-specific
-    "dechet", "collecte", "rapport", "materiau", "echantillon", "lot",
-    "site", "non", "renseigne", "poids", "volume",
-}
-
-
-def build_features_for_model(
-    inp: NumericInput,
-    feature_names: list,
-    prix_revente: float = 0.0,
-) -> pd.DataFrame:
-    """Build a feature DataFrame that exactly matches the model's training schema.
-
-    Dynamically reads feature_names_in_ from the model and fills in:
-    - numeric values from the input
-    - one-hot encoded Source columns
-    - Prix_Revente from the provided estimate
-    - any other columns default to 0
-    """
-    row = {}
-    input_values = {
-        "Poids": inp.Poids,
-        "Volume": inp.Volume,
-        "Conductivite": inp.Conductivite,
-        "Opacite": inp.Opacite,
-        "Rigidite": inp.Rigidite,
-    }
-
-    for feat in feature_names:
-        if feat in input_values:
-            row[feat] = input_values[feat]
-        elif feat == "Prix_Revente":
-            row[feat] = prix_revente
-        elif feat.startswith("Source_"):
-            source_val = feat.replace("Source_", "")
-            row[feat] = 1.0 if inp.Source == source_val else 0.0
-        else:
-            row[feat] = 0.0
-
-    return pd.DataFrame([row])[feature_names]  # enforce column order
-
-
-def _estimate_prix(inp: NumericInput) -> float:
-    """Estimate Prix_Revente using the regressor with uniform category prior.
-
-    Since we don't know the category yet, we average the price prediction
-    across all categories (uniform prior) to get a fair estimate.
-    """
-    reg = models["regressor"]
-    reg_feats = models.get("reg_features")
-    if not reg_feats:
-        return 0.0
-
-    input_values = {
-        "Poids": inp.Poids,
-        "Volume": inp.Volume,
-        "Conductivite": inp.Conductivite,
-        "Opacite": inp.Opacite,
-        "Rigidite": inp.Rigidite,
-    }
-
-    prices = []
-    for cat in CATEGORIES:
-        reg_row = {}
-        for feat in reg_feats:
-            if feat in input_values:
-                reg_row[feat] = input_values[feat]
-            elif feat.startswith("Categorie_"):
-                cat_val = feat.replace("Categorie_", "")
-                reg_row[feat] = 1.0 if cat == cat_val else 0.0
-            elif feat.startswith("Source_"):
-                src_val = feat.replace("Source_", "")
-                reg_row[feat] = 1.0 if inp.Source == src_val else 0.0
-            else:
-                reg_row[feat] = 0.0
-        X_reg = pd.DataFrame([reg_row])[reg_feats]
-        prices.append(float(reg.predict(X_reg)[0]))
-
-    return float(np.mean(prices))
-
-
-def preprocess_text(text: str) -> str:
-    """Lightweight text preprocessing — no spacy dependency.
-
-    Steps: lowercase → remove punctuation/digits → remove stopwords → join.
-    """
-    import re
-
-    if not isinstance(text, str) or not text.strip():
-        return ""
-
-    text = text.lower()
-    text = re.sub(r"[^\w\s]", " ", text)   # punctuation → space
-    text = re.sub(r"\d+", " ", text)        # digits → space
-    text = re.sub(r"\s+", " ", text).strip()
-
-    tokens = [
-        w for w in text.split()
-        if len(w) > 1 and w not in _FR_STOPWORDS
-    ]
-
-    return " ".join(tokens)
 
 
 # ──────────────────────── Lifespan ─────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load models at startup, cleanup at shutdown."""
+    """Load models at startup, init feedback DB, cleanup at shutdown."""
     load_all_models()
+    init_feedback_db()
     yield
     models.clear()
     print("Models unloaded")
@@ -271,7 +44,6 @@ app = FastAPI(
 )
 
 # CORS — allow Flutter web app to call the API
-from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -283,216 +55,14 @@ app.add_middleware(
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app)
 
-
-# ──────────────────────── Endpoints ────────────────────
+# ──────────────────────── Routes ───────────────────────
+app.include_router(predict_router)
+app.include_router(feedback_router)
+app.include_router(export_router)
+app.include_router(mlops_router)
 
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
     """Health check endpoint."""
     return HealthResponse(status="ok", model_version=MODEL_VERSION)
-
-
-@app.post("/predict/numeric", response_model=NumericOutput)
-async def predict_numeric(inp: NumericInput):
-    """Predict category and resale price from numeric features.
-
-    Uses a 2-pass approach:
-    1. Estimate Prix_Revente with uniform category prior
-    2. Use estimated price as a feature for classification
-    """
-    try:
-        clf = models["classifier"]
-        clf_feats = models.get("clf_features")
-
-        # Pass 1: estimate Prix_Revente
-        estimated_prix = _estimate_prix(inp)
-
-        # Pass 2: classify with estimated price
-        if clf_feats:
-            X = build_features_for_model(inp, clf_feats, prix_revente=estimated_prix)
-        else:
-            X = pd.DataFrame([{
-                "Poids": inp.Poids, "Volume": inp.Volume,
-                "Conductivite": inp.Conductivite, "Opacite": inp.Opacite,
-                "Rigidite": inp.Rigidite,
-            }])
-
-        if hasattr(clf, "predict_proba"):
-            proba = clf.predict_proba(X)[0]
-            pred_idx = int(np.argmax(proba))
-            confidence = float(proba[pred_idx])
-        else:
-            pred_idx = int(clf.predict(X)[0])
-            confidence = 0.0
-
-        categorie = CATEGORIES[pred_idx] if pred_idx < len(CATEGORIES) else str(pred_idx)
-
-        # Final regression with the predicted category for accurate price
-        reg = models["regressor"]
-        reg_feats = models.get("reg_features")
-        if reg_feats:
-            reg_row = {}
-            input_values = {
-                "Poids": inp.Poids, "Volume": inp.Volume,
-                "Conductivite": inp.Conductivite, "Opacite": inp.Opacite,
-                "Rigidite": inp.Rigidite,
-            }
-            for feat in reg_feats:
-                if feat in input_values:
-                    reg_row[feat] = input_values[feat]
-                elif feat.startswith("Categorie_"):
-                    cat_val = feat.replace("Categorie_", "")
-                    reg_row[feat] = 1.0 if categorie == cat_val else 0.0
-                elif feat.startswith("Source_"):
-                    src_val = feat.replace("Source_", "")
-                    reg_row[feat] = 1.0 if inp.Source == src_val else 0.0
-                else:
-                    reg_row[feat] = 0.0
-            X_reg = pd.DataFrame([reg_row])[reg_feats]
-        else:
-            X_reg = pd.DataFrame([{
-                "Poids": inp.Poids, "Volume": inp.Volume,
-                "Conductivite": inp.Conductivite, "Opacite": inp.Opacite,
-                "Rigidite": inp.Rigidite,
-            }])
-
-        prix = float(reg.predict(X_reg)[0])
-
-        return NumericOutput(
-            categorie=categorie,
-            prix_revente=round(prix, 2),
-            confidence=round(confidence, 4),
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/predict/text", response_model=TextOutput)
-async def predict_text(inp: TextInput):
-    """Predict category from text report."""
-    try:
-        processed = preprocess_text(inp.rapport)
-
-        vec_info = models["nlp_vectorizer"]
-        nlp_clf = models["nlp_info"]["classifier"]
-        le = models["nlp_label_encoder"]
-
-        vec = vec_info["vec"]
-        vec_type = vec_info["type"]
-
-        if vec_type == "sklearn":
-            X = vec.transform([processed])
-        else:
-            # gensim Word2Vec / FastText — mean pool
-            tokens = processed.split()
-            dim = vec.wv.vector_size
-            vecs = [vec.wv[t] for t in tokens if t in vec.wv]
-            if vecs:
-                X = np.array([np.mean(vecs, axis=0)])
-            else:
-                X = np.zeros((1, dim))
-
-        if hasattr(nlp_clf, "predict_proba"):
-            proba = nlp_clf.predict_proba(X)[0]
-            pred_idx = int(np.argmax(proba))
-            confidence = float(proba[pred_idx])
-        else:
-            pred_idx = int(nlp_clf.predict(X)[0])
-            confidence = 0.0
-
-        categorie = le.inverse_transform([pred_idx])[0]
-
-        return TextOutput(
-            categorie=categorie,
-            confidence=round(confidence, 4),
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/predict/multimodal", response_model=MultimodalOutput)
-async def predict_multimodal(inp: MultimodalInput):
-    """Predict category, price, confidence and cluster from all features."""
-    try:
-        numeric_inp = NumericInput(
-            Poids=inp.Poids,
-            Volume=inp.Volume,
-            Conductivite=inp.Conductivite,
-            Opacite=inp.Opacite,
-            Rigidite=inp.Rigidite,
-            Source=inp.Source,
-        )
-
-        # Pass 1: estimate Prix_Revente
-        estimated_prix = _estimate_prix(numeric_inp)
-
-        # Pass 2: classify with estimated price
-        clf = models["classifier"]
-        clf_feats = models.get("clf_features")
-        if clf_feats:
-            X = build_features_for_model(numeric_inp, clf_feats, prix_revente=estimated_prix)
-        else:
-            X = pd.DataFrame([{
-                "Poids": inp.Poids, "Volume": inp.Volume,
-                "Conductivite": inp.Conductivite, "Opacite": inp.Opacite,
-                "Rigidite": inp.Rigidite,
-            }])
-
-        if hasattr(clf, "predict_proba"):
-            proba = clf.predict_proba(X)[0]
-            pred_idx = int(np.argmax(proba))
-            confidence = float(proba[pred_idx])
-        else:
-            pred_idx = int(clf.predict(X)[0])
-            confidence = 0.0
-
-        categorie = CATEGORIES[pred_idx] if pred_idx < len(CATEGORIES) else str(pred_idx)
-
-        # Regression
-        reg = models["regressor"]
-        reg_feats = models.get("reg_features")
-        if reg_feats:
-            reg_row = {}
-            input_values = {
-                "Poids": inp.Poids, "Volume": inp.Volume,
-                "Conductivite": inp.Conductivite, "Opacite": inp.Opacite,
-                "Rigidite": inp.Rigidite,
-            }
-            for feat in reg_feats:
-                if feat in input_values:
-                    reg_row[feat] = input_values[feat]
-                elif feat.startswith("Categorie_"):
-                    cat_val = feat.replace("Categorie_", "")
-                    reg_row[feat] = 1.0 if categorie == cat_val else 0.0
-                elif feat.startswith("Source_"):
-                    src_val = feat.replace("Source_", "")
-                    reg_row[feat] = 1.0 if inp.Source == src_val else 0.0
-                else:
-                    reg_row[feat] = 0.0
-            X_reg = pd.DataFrame([reg_row])[reg_feats]
-        else:
-            X_reg = pd.DataFrame([{
-                "Poids": inp.Poids, "Volume": inp.Volume,
-                "Conductivite": inp.Conductivite, "Opacite": inp.Opacite,
-                "Rigidite": inp.Rigidite,
-            }])
-
-        prix = float(reg.predict(X_reg)[0])
-
-        # Clustering
-        km = models["kmeans"]
-        cluster_features = np.array(
-            [[inp.Poids, inp.Volume, inp.Conductivite,
-              inp.Opacite, inp.Rigidite, prix]]
-        )
-        cluster_id = int(km.predict(cluster_features)[0])
-
-        return MultimodalOutput(
-            categorie=categorie,
-            prix_revente=round(prix, 2),
-            confidence=round(confidence, 4),
-            cluster_id=cluster_id,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))

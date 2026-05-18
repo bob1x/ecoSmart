@@ -6,17 +6,22 @@ class NlpResult {
   const NlpResult({
     required this.categorie,
     required this.confidence,
+    required this.ecoScore,
     this.keywords = const [],
   });
 
   final String categorie;
   final double confidence;
+  final int ecoScore;
   final List<String> keywords;
 
   factory NlpResult.fromJson(Map<String, dynamic> json) {
+    final kwList = json['top_keywords'] as List<dynamic>?;
     return NlpResult(
       categorie: json['categorie'] as String,
       confidence: (json['confidence'] as num).toDouble(),
+      ecoScore: (json['eco_score'] as num?)?.toInt() ?? 0,
+      keywords: kwList?.map((e) => e.toString()).toList() ?? [],
     );
   }
 }

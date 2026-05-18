@@ -3,12 +3,14 @@ class PredictionResult {
     required this.categorie,
     required this.prixRevente,
     required this.confidence,
+    required this.ecoScore,
     this.clusterId,
   });
 
   final String categorie;
   final double prixRevente;
   final double confidence;
+  final int ecoScore;
   final int? clusterId;
 
   factory PredictionResult.fromJson(Map<String, dynamic> json) {
@@ -16,6 +18,7 @@ class PredictionResult {
       categorie: json['categorie'] as String,
       prixRevente: (json['prix_revente'] as num).toDouble(),
       confidence: (json['confidence'] as num).toDouble(),
+      ecoScore: (json['eco_score'] as num).toInt(),
       clusterId: json['cluster_id'] as int?,
     );
   }

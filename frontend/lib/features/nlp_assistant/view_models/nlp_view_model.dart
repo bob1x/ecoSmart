@@ -1,14 +1,19 @@
 import 'package:flutter/foundation.dart';
 import '../../../data/models/nlp_result.dart';
 import '../../../data/repositories/nlp_repository.dart';
+import '../../../data/services/api_service.dart';
 
 class NlpViewModel extends ChangeNotifier {
-  NlpViewModel({required NlpRepository repository})
-      : _repository = repository {
+  NlpViewModel({
+    required NlpRepository repository,
+    required ApiService apiService,
+  })  : _repository = repository,
+        _apiService = apiService {
     _loadHistory();
   }
 
   final NlpRepository _repository;
+  final ApiService _apiService;
 
   String rapportText = '';
   NlpResult? _result;
@@ -22,6 +27,9 @@ class NlpViewModel extends ChangeNotifier {
 
   List<NlpHistoryItem> _history = [];
   List<NlpHistoryItem> get history => List.unmodifiable(_history);
+
+  bool _feedbackSubmitted = false;
+  bool get feedbackSubmitted => _feedbackSubmitted;
 
   bool get canAnalyse => rapportText.trim().length >= 10;
 
@@ -40,6 +48,7 @@ class NlpViewModel extends ChangeNotifier {
 
     _isLoading = true;
     _error = null;
+    _feedbackSubmitted = false;
     notifyListeners();
 
     try {
@@ -50,6 +59,20 @@ class NlpViewModel extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> submitFeedback(String correctLabel) async {
+    if (_result == null || _feedbackSubmitted) return;
+    try {
+      await _apiService.submitFeedback(
+        predictedLabel: _result!.categorie,
+        correctLabel: correctLabel,
+      );
+      _feedbackSubmitted = true;
+      notifyListeners();
+    } catch (_) {
+      // Silently fail — don't interrupt UX for feedback
     }
   }
 

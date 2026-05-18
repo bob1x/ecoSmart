@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Databases (recreated at runtime)
+*.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MLflow local runs (not needed in production)
+mlruns/
+mlruns.db
+mlartifacts/
+
+# DVC
+.dvc/
+
+# Logs
+*.log
+
+# Model artifacts we DON'T need in production
+# (only the *_best.pkl files are loaded by the API)
+models/classification_artifacts/
+models/regression_artifacts/
+models/clustering_artifacts/
+models/nlp/artifacts/
+models/fusion/artifacts/
+
+# Flutter
+frontend/.dart_tool/
+frontend/.packages
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+
+# Gemini
+.gemini/
+.agents/

@@ -22,8 +22,10 @@ class NlpRepository {
     final json = await _api.predictText(rapport);
     final result = NlpResult.fromJson(json);
 
-    // Extract top keywords client-side (simple frequency)
-    final keywords = _extractKeywords(rapport, topN: 5);
+    // Use server-side keywords if available, fallback to client-side
+    final keywords = result.keywords.isNotEmpty
+        ? result.keywords
+        : _extractKeywords(rapport, topN: 5);
 
     // Persist to Hive
     final box = _box;
@@ -45,6 +47,7 @@ class NlpRepository {
     return NlpResult(
       categorie: result.categorie,
       confidence: result.confidence,
+      ecoScore: result.ecoScore,
       keywords: keywords,
     );
   }

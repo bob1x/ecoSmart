@@ -3,10 +3,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 // ── API Base URL ────────────────────────────────────────────────
-// Web: localhost (same machine)
-// Android emulator: 10.0.2.2 maps to host machine's localhost
-// Production: replace with your server URL
+// DEPLOYMENT: Set your Render URL here once deployed.
+// Example: 'https://ecosmart-api.onrender.com'
+const String _kProductionUrl = ''; // ← PASTE YOUR RENDER URL HERE
+
 String get kApiBaseUrl {
+  // If production URL is set, always use it
+  if (_kProductionUrl.isNotEmpty) return _kProductionUrl;
+  // Local development fallback
   if (kIsWeb) return 'http://localhost:8000';
   return 'http://10.0.2.2:8000';
 }
@@ -72,9 +76,56 @@ class ApiService {
     return _post('/predict/text', {'rapport': rapport});
   }
 
+  Future<void> submitFeedback({
+    required String predictedLabel,
+    required String correctLabel,
+  }) async {
+    await _post('/feedback', {
+      'predicted_label': predictedLabel,
+      'correct_label': correctLabel,
+    }, accept201: true);
+  }
+
+  Future<Map<String, dynamic>> fetchFeedbackStats() async {
+    return _get('/feedback/stats');
+  }
+
   Future<Map<String, dynamic>> fetchHealth() async {
+    return _get('/health');
+  }
+
+  /// SHAP-like feature explanation for numeric prediction
+  Future<Map<String, dynamic>> explainPrediction({
+    required double poids,
+    required double volume,
+    required double conductivite,
+    required double opacite,
+    required double rigidite,
+    required String source,
+  }) async {
+    return _post('/predict/explain', {
+      'Poids': poids,
+      'Volume': volume,
+      'Conductivite': conductivite,
+      'Opacite': opacite,
+      'Rigidite': rigidite,
+      'Source': source,
+    });
+  }
+
+  /// Returns the full URL for CSV / PDF exports (opened via browser)
+  String getExportUrl(String path) => '$kApiBaseUrl$path';
+
+  /// Fetch real MLOps metrics from the backend
+  Future<Map<String, dynamic>> fetchMlopsMetrics() async {
+    return _get('/mlops/metrics');
+  }
+
+  // ── HTTP helpers ──────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> _get(String path) async {
     try {
-      final uri = Uri.parse('$kApiBaseUrl/health');
+      final uri = Uri.parse('$kApiBaseUrl$path');
       final response = await _client
           .get(uri, headers: _headers)
           .timeout(const Duration(seconds: 10));
@@ -82,7 +133,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
-      throw ApiException('Health check failed', statusCode: response.statusCode);
+      throw ApiException('GET $path failed', statusCode: response.statusCode);
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Network error: $e');
@@ -91,15 +142,16 @@ class ApiService {
 
   Future<Map<String, dynamic>> _post(
     String path,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    bool accept201 = false,
+  }) async {
     try {
       final uri = Uri.parse('$kApiBaseUrl$path');
       final response = await _client
           .post(uri, headers: _headers, body: jsonEncode(body))
           .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || (accept201 && response.statusCode == 201)) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
 

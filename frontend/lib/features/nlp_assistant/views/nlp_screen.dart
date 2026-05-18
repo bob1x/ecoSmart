@@ -6,6 +6,8 @@ import '../../../core/theme/app_fonts.dart';
 import '../../../shared/widgets/category_badge.dart';
 import '../../../shared/widgets/confidence_bar.dart';
 import '../../../shared/widgets/eco_card.dart';
+import '../../../shared/widgets/eco_score_gauge.dart';
+import '../../../shared/widgets/feedback_row.dart';
 import '../../../shared/widgets/hero_bar.dart';
 import '../../../shared/widgets/section_label.dart';
 import '../../../data/models/nlp_result.dart';
@@ -148,8 +150,27 @@ class _NlpBodyState extends State<_NlpBody> {
                         ),
                       ),
                     ),
-                  if (_vm.result != null)
+                  if (_vm.result != null) ...[
                     _NlpResultCard(result: _vm.result!),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: EcoScoreGauge(score: _vm.result!.ecoScore, size: 100),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.aiPurpleDark,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.aiPurple.withAlpha(40)),
+                      ),
+                      child: FeedbackRow(
+                        predictedLabel: _vm.result!.categorie,
+                        onFeedback: _vm.submitFeedback,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   const SectionLabel('Analyses récentes'),
                   const SizedBox(height: 8),
