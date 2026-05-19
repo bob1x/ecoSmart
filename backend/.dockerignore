@@ -1,0 +1,31 @@
+# Don't send these to Docker daemon
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.git/
+.gitignore
+mlruns/
+mlruns.db
+*.db
+data/
+grafana/
+tests/
+src/
+*.ipynb
+*.csv
+*.png
+*.md
+docker-compose.yml
+Procfile
+params.yaml
+dvc.yaml
+mlflow_setup.py
+prometheus.yml
+
+# Training artifacts (only *_best.pkl are needed)
+models/classification_artifacts/
+models/regression_artifacts/
+models/clustering_artifacts/
+models/nlp/artifacts/
+models/fusion/artifacts/

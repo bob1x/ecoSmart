@@ -8,7 +8,7 @@ numpy>=1.24
 pandas>=2.0
 scikit-learn>=1.3
 
-# NLP (gensim only needed if NLP vectorizer is Word2Vec/FastText)
+# NLP (gensim needed if NLP vectorizer is Word2Vec/FastText)
 gensim>=4.3
 
 # API
@@ -20,6 +20,3 @@ aiofiles>=23.0
 
 # PDF export
 fpdf2>=2.7
-
-# MLflow (for model registry loading — optional fallback to pkl)
-mlflow>=2.10
