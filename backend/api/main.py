@@ -1,19 +1,21 @@
 """
 api/main.py — FastAPI application entry point
 ================================================
-Slim orchestrator: creates the app, registers middleware, and mounts routers.
-All business logic lives in api/services.py, model loading in api/models.py,
-and endpoints in api/routes/*.
+Slim orchestrator: creates the app, registers middleware, mounts routers,
+and serves the Flutter web build as static files for unified deployment.
 """
 
+import os
 import warnings
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from api.models import MODEL_VERSION, load_all_models, models
+from api.models import MODEL_VERSION, ROOT, load_all_models, models
 from api.schemas import HealthResponse
 from api.services import init_feedback_db
 from api.routes.predict import router as predict_router
@@ -22,6 +24,9 @@ from api.routes.export import router as export_router
 from api.routes.mlops import router as mlops_router
 
 warnings.filterwarnings("ignore")
+
+# Path to Flutter web build
+STATIC_DIR = os.path.join(ROOT, "static")
 
 
 # ──────────────────────── Lifespan ─────────────────────
@@ -55,7 +60,7 @@ app.add_middleware(
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app)
 
-# ──────────────────────── Routes ───────────────────────
+# ──────────────────────── API Routes ───────────────────
 app.include_router(predict_router)
 app.include_router(feedback_router)
 app.include_router(export_router)
@@ -66,3 +71,23 @@ app.include_router(mlops_router)
 async def health():
     """Health check endpoint."""
     return HealthResponse(status="ok", model_version=MODEL_VERSION)
+
+
+# ──────────────────────── Static Files (Flutter Web) ───
+# Mount AFTER API routes so API endpoints take priority.
+# Serves the Flutter web build from backend/static/
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(request: Request, full_path: str):
+        """Serve Flutter SPA — returns index.html for all non-API routes."""
+        # Try to serve the exact file (JS, CSS, images, etc.)
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # Otherwise return index.html (SPA client-side routing)
+        index = os.path.join(STATIC_DIR, "index.html")
+        if os.path.isfile(index):
+            return FileResponse(index)
+        return FileResponse(file_path)  # will 404 naturally

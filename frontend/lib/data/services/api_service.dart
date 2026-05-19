@@ -1,16 +1,15 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:http/http.dart' as http;
 
 // ── API Base URL ────────────────────────────────────────────────
-// DEPLOYMENT: Set your Render URL here once deployed.
-// Example: 'https://ecosmart-api.onrender.com'
-const String _kProductionUrl = ''; // ← PASTE YOUR RENDER URL HERE
-
+// UNIFIED DEPLOYMENT: Frontend + Backend served from the same origin.
+// In release mode (flutter build web), API calls use relative paths.
+// In debug mode (flutter run), uses localhost.
 String get kApiBaseUrl {
-  // If production URL is set, always use it
-  if (_kProductionUrl.isNotEmpty) return _kProductionUrl;
-  // Local development fallback
+  // Release build → same-origin (backend serves both API + static files)
+  if (kReleaseMode) return '';
+  // Local development
   if (kIsWeb) return 'http://localhost:8000';
   return 'http://10.0.2.2:8000';
 }

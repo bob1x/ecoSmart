@@ -16,6 +16,7 @@ fastapi>=0.110
 uvicorn[standard]>=0.27
 pydantic>=2.5
 prometheus-fastapi-instrumentator>=6.1
+aiofiles>=23.0
 
 # PDF export
 fpdf2>=2.7
