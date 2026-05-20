@@ -39,9 +39,9 @@ class ApiMetrics {
   });
 
   final int requests;
-  final int avgLatency;
+  final double avgLatency;
   final double errorRate;
-  final int p95Latency;
+  final double p95Latency;
 }
 
 class CiStep {

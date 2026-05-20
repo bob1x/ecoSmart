@@ -147,17 +147,19 @@ class MlopsViewModel extends ChangeNotifier {
       // ── Parse feedback stats ──
       final fbStats = json['feedback_stats'] as Map<String, dynamic>? ?? {};
       final fbTotal = (fbStats['total'] as num?)?.toInt() ?? 0;
-      final fbCorrections = (fbStats['corrections'] as num?)?.toInt() ?? 0;
       final fbAccuracy = (fbStats['accuracy'] as num?)?.toDouble() ?? 1.0;
 
-      // Generate API metrics from feedback data
+      // ── Parse real API stats from metrics tracker ──
+      final apiStatsRaw = json['api_stats'] as Map<String, dynamic>? ?? {};
       _apiMetrics = ApiMetrics(
-        requests: fbTotal,
-        avgLatency: 142,
-        errorRate: fbTotal > 0 ? double.parse(((fbCorrections / fbTotal) * 100).toStringAsFixed(1)) : 0,
-        p95Latency: 389,
+        requests: (apiStatsRaw['total_requests'] as num?)?.toInt() ?? 0,
+        avgLatency: (apiStatsRaw['avg_latency_ms'] as num?)?.toDouble() ?? 0,
+        errorRate: (apiStatsRaw['error_rate_pct'] as num?)?.toDouble() ?? 0,
+        p95Latency: (apiStatsRaw['p95_latency_ms'] as num?)?.toDouble() ?? 0,
       );
-      _latencyTrend = [120, 140, 135, 150, 142, 138, 145];
+      final rawTrend = apiStatsRaw['latency_trend'] as List<dynamic>? ?? [];
+      _latencyTrend = rawTrend.map((e) => (e as num).toDouble()).toList();
+      if (_latencyTrend.isEmpty) _latencyTrend = [0];
 
       // ── Parse registry ──
       final reg = json['registry'] as Map<String, dynamic>? ?? {};
@@ -168,7 +170,7 @@ class MlopsViewModel extends ChangeNotifier {
       // ── Build confusion matrix from categories ──
       final cats = (reg['categories'] as List<dynamic>?)?.cast<String>() ?? ['Pla.', 'Métal', 'Verre', 'Papier'];
       _matrixLabels = cats.map((c) => c.length > 5 ? '${c.substring(0, 4)}.' : c).toList();
-      _matrixTestN = fbTotal > 0 ? fbTotal : 428;
+      _matrixTestN = fbTotal > 0 ? fbTotal : 0;
 
       // Use feedback confusion data if available, else generate from accuracy
       final cmRaw = json['confusion_matrix'] as Map<String, dynamic>? ?? {};
@@ -178,13 +180,20 @@ class MlopsViewModel extends ChangeNotifier {
         _confusionMatrix = _buildDefaultMatrix(cats, fbAccuracy);
       }
 
-      // ── CI steps — based on real loaded models ──
-      _ciSteps = [
-        CiStep(name: 'models', detail: '${_totalRuns} loaded', passed: true),
-        CiStep(name: 'features', detail: '${reg['n_features'] ?? 0} cols', passed: true),
-        CiStep(name: 'clusters', detail: 'k=${reg['kmeans_clusters'] ?? 0}', passed: true),
-        CiStep(name: 'feedback', detail: '$fbTotal entries', passed: fbTotal >= 0),
-      ];
+      // ── CI steps from real backend health checks ──
+      final rawCi = json['ci_steps'] as List<dynamic>? ?? [];
+      if (rawCi.isNotEmpty) {
+        _ciSteps = rawCi.map((s) {
+          final m = s as Map<String, dynamic>;
+          return CiStep(
+            name: m['name'] as String? ?? '',
+            detail: m['detail'] as String? ?? '',
+            passed: m['passed'] as bool? ?? false,
+          );
+        }).toList();
+      } else {
+        _ciSteps = [CiStep(name: 'API', detail: 'no data', passed: false)];
+      }
       _allGreen = _ciSteps.every((s) => s.passed);
     } catch (e) {
       _error = e.toString();

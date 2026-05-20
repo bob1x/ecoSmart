@@ -118,21 +118,21 @@ class DataDriftPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('API METRICS · LAST 24H',
+                  Text('API METRICS · LIVE',
                       style: TextStyle(fontFamily: AppFonts.inter, fontSize: 11, fontWeight: FontWeight.w600,
                           color: AppColors.inkTertiary, letterSpacing: 0.5)),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(child: _ApiStat(label: 'Requests', value: '1.284', unit: '', valueColor: AppColors.inkPrimary)),
-                      Expanded(child: _ApiStat(label: 'Avg latency', value: '142', unit: 'ms', valueColor: AppColors.inkPrimary)),
+                      Expanded(child: _ApiStat(label: 'Requests', value: vm.apiMetrics.requests.toString(), unit: '', valueColor: AppColors.inkPrimary)),
+                      Expanded(child: _ApiStat(label: 'Avg latency', value: vm.apiMetrics.avgLatency.toStringAsFixed(0), unit: 'ms', valueColor: AppColors.inkPrimary)),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(child: _ApiStat(label: 'Error rate', value: '0.3', unit: '%', valueColor: AppColors.ecoGreen)),
-                      Expanded(child: _ApiStat(label: 'p95 latency', value: '389', unit: 'ms', valueColor: AppColors.mlopsGold)),
+                      Expanded(child: _ApiStat(label: 'Error rate', value: vm.apiMetrics.errorRate.toStringAsFixed(1), unit: '%', valueColor: vm.apiMetrics.errorRate < 5 ? AppColors.ecoGreen : AppColors.errorRed)),
+                      Expanded(child: _ApiStat(label: 'p95 latency', value: vm.apiMetrics.p95Latency.toStringAsFixed(0), unit: 'ms', valueColor: vm.apiMetrics.p95Latency < 500 ? AppColors.mlopsGold : AppColors.errorRed)),
                     ],
                   ),
                   const SizedBox(height: 16),

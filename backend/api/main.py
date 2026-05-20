@@ -2,10 +2,11 @@
 api/main.py — FastAPI application entry point
 ================================================
 Slim orchestrator: creates the app, registers middleware, mounts routers,
-and serves the Flutter web build as static files for unified deployment.
+tracks real API metrics, and serves the Flutter web build.
 """
 
 import os
+import time
 import warnings
 from contextlib import asynccontextmanager
 
@@ -18,6 +19,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from api.models import MODEL_VERSION, ROOT, load_all_models, models
 from api.schemas import HealthResponse
 from api.services import init_feedback_db
+from api.metrics_tracker import record_request
 from api.routes.predict import router as predict_router
 from api.routes.feedback import router as feedback_router
 from api.routes.export import router as export_router
@@ -48,7 +50,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow Flutter web app to call the API
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -59,6 +61,28 @@ app.add_middleware(
 
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app)
+
+
+# ──────────────────────── Metrics Middleware ────────────
+@app.middleware("http")
+async def track_metrics(request: Request, call_next):
+    """Record latency and error rate for every API request."""
+    # Skip static file requests
+    path = request.url.path
+    if path.startswith("/static") or "." in path.split("/")[-1]:
+        return await call_next(request)
+
+    start = time.perf_counter()
+    response = await call_next(request)
+    latency_ms = (time.perf_counter() - start) * 1000
+
+    record_request(
+        path=path,
+        latency_ms=latency_ms,
+        is_error=response.status_code >= 400,
+    )
+    return response
+
 
 # ──────────────────────── API Routes ───────────────────
 app.include_router(predict_router)
@@ -74,20 +98,16 @@ async def health():
 
 
 # ──────────────────────── Static Files (Flutter Web) ───
-# Mount AFTER API routes so API endpoints take priority.
-# Serves the Flutter web build from backend/static/
 if os.path.isdir(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_assets")
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="flutter_assets")
 
     @app.get("/{full_path:path}")
     async def serve_spa(request: Request, full_path: str):
         """Serve Flutter SPA — returns index.html for all non-API routes."""
-        # Try to serve the exact file (JS, CSS, images, etc.)
         file_path = os.path.join(STATIC_DIR, full_path)
         if os.path.isfile(file_path):
             return FileResponse(file_path)
-        # Otherwise return index.html (SPA client-side routing)
         index = os.path.join(STATIC_DIR, "index.html")
         if os.path.isfile(index):
             return FileResponse(index)
-        return FileResponse(file_path)  # will 404 naturally
+        return FileResponse(file_path)
