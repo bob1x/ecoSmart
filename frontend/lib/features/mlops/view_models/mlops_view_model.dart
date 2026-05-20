@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../data/services/api_service.dart';
 import '../models/mlops_models.dart';
@@ -7,9 +8,15 @@ import '../models/mlops_models.dart';
 class MlopsViewModel extends ChangeNotifier {
   MlopsViewModel({required ApiService apiService}) : _api = apiService {
     fetchMetrics();
+    // Auto-refresh every 30 seconds for live dashboard
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => fetchMetrics(),
+    );
   }
 
   final ApiService _api;
+  Timer? _refreshTimer;
 
   // ── Page controller for swipe navigation ─────────────────────
   final pageController = PageController();
@@ -266,8 +273,8 @@ class MlopsViewModel extends ChangeNotifier {
       DriftFeature(name: 'Opacité', jsDivergence: 0.047, color: 0xFFFB923C),
       DriftFeature(name: 'Rigidité', jsDivergence: 0.020, color: 0xFF38BDF8),
     ];
-    _apiMetrics = const ApiMetrics(requests: 0, avgLatency: 142, errorRate: 0, p95Latency: 389);
-    _latencyTrend = [120, 140, 135, 150, 142, 138, 145];
+    _apiMetrics = const ApiMetrics(requests: 0, avgLatency: 0, errorRate: 0, p95Latency: 0);
+    _latencyTrend = [0];
     _matrixLabels = ['Métal', 'Papier', 'Pla.', 'Verre'];
     _matrixTestN = 428;
     _confusionMatrix = _buildDefaultMatrix(['Métal', 'Papier', 'Plastique', 'Verre'], 0.95);
@@ -283,6 +290,7 @@ class MlopsViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     pageController.dispose();
     super.dispose();
   }

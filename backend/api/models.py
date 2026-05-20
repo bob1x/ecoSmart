@@ -2,6 +2,7 @@
 api/models.py — Global model store, loading, and constants
 """
 
+import json
 import os
 import pickle
 from typing import Any, Dict, List
@@ -104,5 +105,15 @@ def load_all_models() -> None:
         os.path.join(MODELS_DIR, "fusion", "multimodal_best.pkl")
     )
     print(f"  [OK] Loaded multimodal: {models['multimodal']['label']}")
+
+    # Load training scores
+    scores_path = os.path.join(MODELS_DIR, "model_scores.json")
+    if os.path.exists(scores_path):
+        with open(scores_path) as f:
+            models["scores"] = json.load(f)
+        print(f"  [OK] Loaded training scores from model_scores.json")
+    else:
+        models["scores"] = {}
+        print("  [WARN] model_scores.json not found, scores will be 0")
 
     print("All models loaded [OK]")

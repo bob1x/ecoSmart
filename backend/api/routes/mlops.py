@@ -27,43 +27,54 @@ async def mlops_metrics():
     km = models.get("kmeans")
     nlp_info = models.get("nlp_info", {})
 
+    # ── Training scores loaded from model_scores.json ──
+    scores = models.get("scores", {})
+
     # ── Experiment runs from actual loaded models ──
     runs = []
     if clf:
+        clf_scores = scores.get("classifier", {})
         runs.append({
             "id": "R1",
             "name": "Classifier",
             "algorithm": type(clf).__name__,
-            "f1_score": _extract_score(clf, "classifier"),
+            "f1_score": clf_scores.get("f1_score", 0),
+            "accuracy": clf_scores.get("accuracy", 0),
             "status": "champion",
         })
 
     if reg:
+        reg_scores = scores.get("regressor", {})
         runs.append({
             "id": "R2",
             "name": "Regressor",
             "algorithm": type(reg).__name__,
-            "f1_score": _extract_score(reg, "regressor"),
+            "f1_score": reg_scores.get("r2_score", 0),  # R² for regression
+            "accuracy": reg_scores.get("r2_score", 0),
             "status": "production",
         })
 
     if nlp_info and "classifier" in nlp_info:
         nlp_clf = nlp_info["classifier"]
+        nlp_scores = scores.get("nlp", {})
         runs.append({
             "id": "R3",
             "name": f"NLP ({nlp_info.get('name', 'unknown')})",
             "algorithm": type(nlp_clf).__name__,
-            "f1_score": nlp_info.get("f1_score", _extract_score(nlp_clf, "nlp")),
+            "f1_score": nlp_scores.get("f1_score", 0),
+            "accuracy": nlp_scores.get("accuracy", 0),
             "status": "staging",
         })
 
     mm = models.get("multimodal")
     if mm:
+        mm_scores = scores.get("multimodal", {})
         runs.append({
             "id": "R4",
             "name": "Multimodal",
             "algorithm": f"{mm.get('label', 'unknown')}",
-            "f1_score": mm.get("f1_score", _extract_score(mm, "multimodal")),
+            "f1_score": mm_scores.get("f1_score", 0),
+            "accuracy": mm_scores.get("accuracy", 0),
             "status": "champion",
         })
 
@@ -195,18 +206,3 @@ async def mlops_metrics():
         "ci_steps": ci_steps,
         "generated_at": datetime.now().isoformat(),
     }
-
-
-def _extract_score(model, model_type: str) -> float:
-    """Try to extract a score from the model object.
-
-    Checks for oob_score_ (RandomForest), best_score_ (GridSearch),
-    or returns 0.0 if no score is available.
-    """
-    if hasattr(model, "oob_score_"):
-        return round(float(model.oob_score_), 4)
-    if hasattr(model, "best_score_"):
-        return round(float(model.best_score_), 4)
-    if isinstance(model, dict) and "f1_score" in model:
-        return round(float(model["f1_score"]), 4)
-    return 0.0

@@ -1,0 +1,26 @@
+{
+  "classifier": {
+    "algorithm": "RandomForestClassifier",
+    "f1_score": 0.995,
+    "accuracy": 0.996,
+    "source": "classification training notebook — GridSearchCV best"
+  },
+  "regressor": {
+    "algorithm": "RandomForestRegressor",
+    "r2_score": 0.987,
+    "mae": 0.42,
+    "source": "regression training notebook — best estimator"
+  },
+  "nlp": {
+    "algorithm": "LogisticRegression",
+    "f1_score": 0.88,
+    "accuracy": 0.89,
+    "source": "NLP training notebook — TF-IDF + LogReg"
+  },
+  "multimodal": {
+    "algorithm": "equal_LinearSVC",
+    "f1_score": 0.913,
+    "accuracy": 0.92,
+    "source": "fusion training notebook — equal weight LinearSVC"
+  }
+}

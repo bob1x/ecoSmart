@@ -18,13 +18,32 @@ class PipelinePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ─────────────────────────────────────────
-            Text('CI/CD · MODEL HEALTH',
-                style: TextStyle(fontFamily: AppFonts.inter, fontSize: 11, fontWeight: FontWeight.w600,
-                    color: AppColors.inkTertiary, letterSpacing: 1.5)),
-            const SizedBox(height: 4),
-            Text('Pipeline',
-                style: TextStyle(fontFamily: AppFonts.spaceGrotesk, fontSize: 28, fontWeight: FontWeight.w700,
-                    color: AppColors.inkPrimary)),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('CI/CD · MODEL HEALTH',
+                          style: TextStyle(fontFamily: AppFonts.inter, fontSize: 11, fontWeight: FontWeight.w600,
+                              color: AppColors.inkTertiary, letterSpacing: 1.5)),
+                      const SizedBox(height: 4),
+                      Text('Pipeline',
+                          style: TextStyle(fontFamily: AppFonts.spaceGrotesk, fontSize: 28, fontWeight: FontWeight.w700,
+                              color: AppColors.inkPrimary)),
+                    ],
+                  ),
+                ),
+                // Manual refresh button
+                IconButton(
+                  onPressed: vm.loading ? null : () => vm.fetchMetrics(),
+                  icon: vm.loading
+                      ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.ecoGreen))
+                      : Icon(Icons.refresh, color: AppColors.ecoGreen),
+                  tooltip: 'Refresh metrics',
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
 
             // ── GitHub Actions ─────────────────────────────────
