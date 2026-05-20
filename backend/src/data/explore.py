@@ -6,15 +6,15 @@ Outputs: reports/eda_profile.json
 Logs to MLflow experiment 'eda-profiling'.
 """
 
+import json
 import os
 import sys
-import json
 import warnings
 
+import mlflow
 import numpy as np
 import pandas as pd
 import yaml
-import mlflow
 
 warnings.filterwarnings("ignore")
 
@@ -57,8 +57,7 @@ def main():
     # Numeric statistics
     desc = df[num_cols].describe().to_dict()
     profile["describe_numeric"] = {
-        col: {k: round(v, 6) for k, v in stats.items()}
-        for col, stats in desc.items()
+        col: {k: round(v, 6) for k, v in stats.items()} for col, stats in desc.items()
     }
 
     # Missing values

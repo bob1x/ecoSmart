@@ -65,9 +65,7 @@ def main():
 
     # Split temp into val and test
     relative_test = test_ratio / (val_ratio + test_ratio)
-    stratify_temp = (
-        df_temp[stratify_col] if stratify_col in df_temp.columns else None
-    )
+    stratify_temp = df_temp[stratify_col] if stratify_col in df_temp.columns else None
 
     df_val, df_test = train_test_split(
         df_temp,

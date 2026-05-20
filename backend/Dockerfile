@@ -21,6 +21,7 @@ COPY api/ ./api/
 COPY models/classifier_best.pkl ./models/classifier_best.pkl
 COPY models/regressor_best.pkl ./models/regressor_best.pkl
 COPY models/kmeans_best.pkl ./models/kmeans_best.pkl
+COPY models/model_scores.json ./models/model_scores.json
 COPY models/nlp/nlp_model_best.pkl ./models/nlp/nlp_model_best.pkl
 COPY models/nlp/vectorizer_best.pkl ./models/nlp/vectorizer_best.pkl
 COPY models/nlp/label_encoder.pkl ./models/nlp/label_encoder.pkl

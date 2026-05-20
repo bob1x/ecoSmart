@@ -18,9 +18,11 @@ def spacy_available():
     """Check if spaCy is installed (needed for text endpoint)."""
     try:
         import spacy
+
         return True
     except ImportError:
         return False
+
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -55,6 +57,7 @@ pytestmark = pytest.mark.skipif(
 def client():
     """Create TestClient for the FastAPI app."""
     from fastapi.testclient import TestClient
+
     from api.main import app
 
     with TestClient(app) as c:

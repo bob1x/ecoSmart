@@ -101,6 +101,34 @@ class MlopsViewModel extends ChangeNotifier {
   String _registryStage = '—';
   String get registryStage => _registryStage;
 
+  // ── Prometheus live metrics ──────────────────────────────────
+  bool _promAvailable = false;
+  bool get promAvailable => _promAvailable;
+
+  List<Map<String, dynamic>> _requestRateSeries = [];
+  List<Map<String, dynamic>> get requestRateSeries => _requestRateSeries;
+
+  List<Map<String, dynamic>> _latencySeries = [];
+  List<Map<String, dynamic>> get latencySeries => _latencySeries;
+
+  List<Map<String, dynamic>> _endpointBreakdown = [];
+  List<Map<String, dynamic>> get endpointBreakdown => _endpointBreakdown;
+
+  int _promTotalRequests = 0;
+  int get promTotalRequests => _promTotalRequests;
+
+  double _promErrorRate = 0;
+  double get promErrorRate => _promErrorRate;
+
+  int _uptimeSeconds = 0;
+  int get uptimeSeconds => _uptimeSeconds;
+  String get uptimeFormatted {
+    final h = _uptimeSeconds ~/ 3600;
+    final m = (_uptimeSeconds % 3600) ~/ 60;
+    if (h > 0) return '${h}h ${m}m';
+    return '${m}m';
+  }
+
   // ── Fetch real metrics ──────────────────────────────────────
   Future<void> fetchMetrics() async {
     _loading = true;
@@ -202,12 +230,41 @@ class MlopsViewModel extends ChangeNotifier {
         _ciSteps = [CiStep(name: 'API', detail: 'no data', passed: false)];
       }
       _allGreen = _ciSteps.every((s) => s.passed);
+
+      // ── Fetch Prometheus time-series (parallel, non-blocking) ──
+      _fetchPrometheus();
     } catch (e) {
       _error = e.toString();
       _setFallbackData();
     } finally {
       _loading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _fetchPrometheus() async {
+    try {
+      final prom = await _api.fetchPrometheusMetrics();
+      _promAvailable = prom['prometheus_available'] as bool? ?? false;
+      _promTotalRequests = (prom['total_requests'] as num?)?.toInt() ?? 0;
+      _promErrorRate = (prom['error_rate_pct'] as num?)?.toDouble() ?? 0;
+      _uptimeSeconds = (prom['uptime_seconds'] as num?)?.toInt() ?? 0;
+
+      // Request rate time-series
+      final rawRate = prom['request_rate_series'] as List<dynamic>? ?? [];
+      _requestRateSeries = rawRate.map((s) => s as Map<String, dynamic>).toList();
+
+      // Latency time-series
+      final rawLat = prom['latency_series'] as List<dynamic>? ?? [];
+      _latencySeries = rawLat.map((s) => s as Map<String, dynamic>).toList();
+
+      // Endpoint breakdown
+      final rawEp = prom['endpoint_breakdown'] as List<dynamic>? ?? [];
+      _endpointBreakdown = rawEp.map((s) => s as Map<String, dynamic>).toList();
+
+      notifyListeners();
+    } catch (_) {
+      _promAvailable = false;
     }
   }
 

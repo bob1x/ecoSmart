@@ -9,8 +9,9 @@ from datetime import datetime
 import numpy as np
 from fastapi import APIRouter
 
-from api.models import CATEGORIES, FEEDBACK_DB, MODEL_VERSION, MODELS_DIR, models
 from api.metrics_tracker import get_stats as get_api_stats
+from api.models import (CATEGORIES, FEEDBACK_DB, MODEL_VERSION, MODELS_DIR,
+                        models)
 
 router = APIRouter(tags=["mlops"])
 
@@ -34,49 +35,57 @@ async def mlops_metrics():
     runs = []
     if clf:
         clf_scores = scores.get("classifier", {})
-        runs.append({
-            "id": "R1",
-            "name": "Classifier",
-            "algorithm": type(clf).__name__,
-            "f1_score": clf_scores.get("f1_score", 0),
-            "accuracy": clf_scores.get("accuracy", 0),
-            "status": "champion",
-        })
+        runs.append(
+            {
+                "id": "R1",
+                "name": "Classifier",
+                "algorithm": type(clf).__name__,
+                "f1_score": clf_scores.get("f1_score", 0),
+                "accuracy": clf_scores.get("accuracy", 0),
+                "status": "champion",
+            }
+        )
 
     if reg:
         reg_scores = scores.get("regressor", {})
-        runs.append({
-            "id": "R2",
-            "name": "Regressor",
-            "algorithm": type(reg).__name__,
-            "f1_score": reg_scores.get("r2_score", 0),  # R² for regression
-            "accuracy": reg_scores.get("r2_score", 0),
-            "status": "production",
-        })
+        runs.append(
+            {
+                "id": "R2",
+                "name": "Regressor",
+                "algorithm": type(reg).__name__,
+                "f1_score": reg_scores.get("r2_score", 0),  # R² for regression
+                "accuracy": reg_scores.get("r2_score", 0),
+                "status": "production",
+            }
+        )
 
     if nlp_info and "classifier" in nlp_info:
         nlp_clf = nlp_info["classifier"]
         nlp_scores = scores.get("nlp", {})
-        runs.append({
-            "id": "R3",
-            "name": f"NLP ({nlp_info.get('name', 'unknown')})",
-            "algorithm": type(nlp_clf).__name__,
-            "f1_score": nlp_scores.get("f1_score", 0),
-            "accuracy": nlp_scores.get("accuracy", 0),
-            "status": "staging",
-        })
+        runs.append(
+            {
+                "id": "R3",
+                "name": f"NLP ({nlp_info.get('name', 'unknown')})",
+                "algorithm": type(nlp_clf).__name__,
+                "f1_score": nlp_scores.get("f1_score", 0),
+                "accuracy": nlp_scores.get("accuracy", 0),
+                "status": "staging",
+            }
+        )
 
     mm = models.get("multimodal")
     if mm:
         mm_scores = scores.get("multimodal", {})
-        runs.append({
-            "id": "R4",
-            "name": "Multimodal",
-            "algorithm": f"{mm.get('label', 'unknown')}",
-            "f1_score": mm_scores.get("f1_score", 0),
-            "accuracy": mm_scores.get("accuracy", 0),
-            "status": "champion",
-        })
+        runs.append(
+            {
+                "id": "R4",
+                "name": "Multimodal",
+                "algorithm": f"{mm.get('label', 'unknown')}",
+                "f1_score": mm_scores.get("f1_score", 0),
+                "accuracy": mm_scores.get("accuracy", 0),
+                "status": "champion",
+            }
+        )
 
     # ── Feature importances (real from RandomForest) ──
     feature_importances = []
@@ -87,10 +96,12 @@ async def mlops_metrics():
         )
         for feat, imp in pairs[:10]:
             display = feat.replace("Categorie_", "Cat: ").replace("Source_", "Src: ")
-            feature_importances.append({
-                "feature": display,
-                "importance": round(float(imp), 4),
-            })
+            feature_importances.append(
+                {
+                    "feature": display,
+                    "importance": round(float(imp), 4),
+                }
+            )
 
     # ── Feedback-based metrics (real from SQLite) ──
     feedback_stats = {"total": 0, "corrections": 0, "accuracy": 1.0, "per_class": {}}
@@ -146,11 +157,13 @@ async def mlops_metrics():
                 js_div = round(abs(imp - mean_imp) / (mean_imp + 1e-9) * 0.05, 4)
             else:
                 js_div = 0.0
-            drift_features.append({
-                "name": feat[:8],
-                "js_divergence": js_div,
-                "color": drift_colors[i] if i < len(drift_colors) else 0xFF00D47E,
-            })
+            drift_features.append(
+                {
+                    "name": feat[:8],
+                    "js_divergence": js_div,
+                    "color": drift_colors[i] if i < len(drift_colors) else 0xFF00D47E,
+                }
+            )
 
     # ── Live API stats (real from metrics_tracker) ──
     api_stats = get_api_stats()

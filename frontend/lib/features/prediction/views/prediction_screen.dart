@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_fonts.dart';
-import '../../../shared/widgets/category_badge.dart';
-import '../../../shared/widgets/confidence_bar.dart';
 import '../../../shared/widgets/eco_card.dart';
-import '../../../shared/widgets/eco_score_gauge.dart';
 import '../../../shared/widgets/feature_slider.dart';
-import '../../../shared/widgets/feedback_row.dart';
 import '../../../shared/widgets/hero_bar.dart';
 import '../../../shared/widgets/section_label.dart';
-import '../../../data/models/prediction_result.dart';
 import '../view_models/prediction_view_model.dart';
+import '../widgets/prediction_result_card.dart';
+import '../widgets/prediction_shap_impact.dart';
 
 class PredictionScreen extends StatelessWidget {
   const PredictionScreen({super.key});
@@ -101,59 +97,32 @@ class _PredictionBodyState extends State<_PredictionBody> {
               const SizedBox(height: 16),
               const SectionLabel('Source'),
               const SizedBox(height: 8),
-              _SourceSelector(
-                selected: _vm.selectedSource,
-                onSelected: _vm.onSourceChanged,
-              ),
+              _SourceSelector(selected: _vm.selectedSource, onSelected: _vm.onSourceChanged),
               const SizedBox(height: 16),
               Row(
                 children: [
                   const SectionLabel('Mode multimodal'),
                   const Spacer(),
-                  Switch(
-                    value: _vm.multimodalEnabled,
-                    onChanged: _vm.onMultimodalToggled,
-                    activeColor: AppColors.aiPurple,
-                  ),
+                  Switch(value: _vm.multimodalEnabled, onChanged: _vm.onMultimodalToggled, activeColor: AppColors.aiPurple),
                 ],
               ),
 
-              // ── Rapport field — uses controller from State, never rebuilt ──
+              // ── Rapport field ──
               if (_vm.multimodalEnabled)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: TextField(
                     controller: _rapportController,
-                    minLines: 3,
-                    maxLines: 6,
-                    style: TextStyle(
-                      fontFamily: AppFonts.inter,
-                      fontSize: 13,
-                      color: AppColors.inkPrimary,
-                      height: 1.55,
-                    ),
+                    minLines: 3, maxLines: 6,
+                    style: TextStyle(fontFamily: AppFonts.inter, fontSize: 13, color: AppColors.inkPrimary, height: 1.55),
                     decoration: InputDecoration(
                       hintText: 'Décrivez l\'objet collecté…',
-                      hintStyle: TextStyle(
-                        fontFamily: AppFonts.inter,
-                        fontSize: 13,
-                        color: AppColors.inkTertiary,
-                        fontStyle: FontStyle.italic,
-                      ),
+                      hintStyle: TextStyle(fontFamily: AppFonts.inter, fontSize: 13, color: AppColors.inkTertiary, fontStyle: FontStyle.italic),
                       filled: true,
                       fillColor: AppColors.aiPurpleLight,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.aiPurple.withAlpha(80)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.aiPurple.withAlpha(80)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.aiPurple, width: 1.5),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.aiPurple.withAlpha(80))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.aiPurple.withAlpha(80))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.aiPurple, width: 1.5)),
                       contentPadding: const EdgeInsets.all(14),
                     ),
                   ),
@@ -177,36 +146,27 @@ class _PredictionBodyState extends State<_PredictionBody> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_vm.isLoading)
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 1.5),
-                        )
+                        const SizedBox(width: 16, height: 16,
+                            child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 1.5))
                       else
                         const Icon(Icons.play_arrow_rounded, size: 18),
                       const SizedBox(width: 8),
-                      Text(
-                        'Lancer la prédiction',
-                        style: TextStyle(
-                          fontFamily: AppFonts.spaceGrotesk,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      Text('Lancer la prédiction',
+                          style: TextStyle(fontFamily: AppFonts.spaceGrotesk, fontSize: 14, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
 
-              _ResultCard(result: _vm.result, isLoading: _vm.isLoading, error: _vm.error),
+              ResultCard(result: _vm.result, isLoading: _vm.isLoading, error: _vm.error),
 
               // ── SHAP Waterfall ──
               if (_vm.contributions != null && _vm.contributions!.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const SectionLabel('Explication du modèle'),
                 const SizedBox(height: 8),
-                _ShapWaterfall(contributions: _vm.contributions!),
+                ShapWaterfall(contributions: _vm.contributions!),
               ],
 
               // ── Environmental Impact ──
@@ -214,7 +174,7 @@ class _PredictionBodyState extends State<_PredictionBody> {
                 const SizedBox(height: 16),
                 const SectionLabel('Impact environnemental'),
                 const SizedBox(height: 8),
-                _ImpactCard(categorie: _vm.result!.categorie),
+                ImpactCard(categorie: _vm.result!.categorie),
               ],
               const SizedBox(height: 24),
             ],
@@ -225,6 +185,7 @@ class _PredictionBodyState extends State<_PredictionBody> {
   }
 }
 
+// ── Source Selector ──────────────────────────────────────────────
 class _SourceSelector extends StatelessWidget {
   const _SourceSelector({required this.selected, required this.onSelected});
   final String selected;
@@ -260,54 +221,24 @@ class _SourceSelector extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: isSelected
                       ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.ecoGreen.withAlpha(40),
-                            AppColors.ecoGreenDark.withAlpha(30),
-                          ],
+                          begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          colors: [AppColors.ecoGreen.withAlpha(40), AppColors.ecoGreenDark.withAlpha(30)],
                         )
                       : null,
                   color: isSelected ? null : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
-                  border: isSelected
-                      ? Border.all(color: AppColors.ecoGreen.withAlpha(60))
-                      : null,
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppColors.ecoGreen.withAlpha(15),
-                            blurRadius: 8,
-                            spreadRadius: 0,
-                          ),
-                        ]
-                      : null,
+                  border: isSelected ? Border.all(color: AppColors.ecoGreen.withAlpha(60)) : null,
+                  boxShadow: isSelected ? [BoxShadow(color: AppColors.ecoGreen.withAlpha(15), blurRadius: 8)] : null,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      item.$3,
-                      size: 18,
-                      color: isSelected
-                          ? AppColors.ecoGreen
-                          : AppColors.inkTertiary,
-                    ),
+                    Icon(item.$3, size: 18, color: isSelected ? AppColors.ecoGreen : AppColors.inkTertiary),
                     const SizedBox(height: 4),
-                    Text(
-                      item.$2,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: AppFonts.inter,
-                        fontSize: 10,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected
-                            ? AppColors.ecoGreen
-                            : AppColors.inkTertiary,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
+                    Text(item.$2, textAlign: TextAlign.center,
+                        style: TextStyle(fontFamily: AppFonts.inter, fontSize: 10,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: isSelected ? AppColors.ecoGreen : AppColors.inkTertiary, letterSpacing: 0.2)),
                   ],
                 ),
               ),
@@ -315,443 +246,6 @@ class _SourceSelector extends StatelessWidget {
           );
         }).toList(),
       ),
-    );
-  }
-}
-
-class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.result, required this.isLoading, this.error});
-  final PredictionResult? result;
-  final bool isLoading;
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = context.read<PredictionViewModel>();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: isLoading
-          ? const _ShimmerResult()
-          : result != null
-              ? Column(
-                  children: [
-                    _ResultContent(result: result!),
-                    const SizedBox(height: 14),
-                    Center(
-                      child: EcoScoreGauge(score: result!.ecoScore, size: 110),
-                    ),
-                    const SizedBox(height: 14),
-                    FeedbackRow(
-                      predictedLabel: result!.categorie,
-                      onFeedback: vm.submitFeedback,
-                    ),
-                  ],
-                )
-              : _EmptyResult(error: error),
-    );
-  }
-}
-
-class _EmptyResult extends StatelessWidget {
-  const _EmptyResult({this.error});
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Résultat',
-          style: TextStyle(fontFamily: AppFonts.inter, fontSize: 11, color: AppColors.inkTertiary),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          error ?? 'Ajustez les curseurs puis lancez la prédiction',
-          style: TextStyle(
-            fontFamily: AppFonts.spaceGrotesk,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: error != null ? AppColors.errorRed : AppColors.inkPrimary,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ResultContent extends StatelessWidget {
-  const _ResultContent({required this.result});
-  final PredictionResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    final prixTnd = result.prixRevente * 3.37; // EUR → TND conversion
-    final fmt = NumberFormat.currency(locale: 'fr_FR', symbol: 'TND', decimalDigits: 2);
-    final catColor = AppColors.forCategory(result.categorie);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Catégorie prédite', style: TextStyle(fontFamily: AppFonts.inter, fontSize: 11, color: AppColors.inkTertiary)),
-                  const SizedBox(height: 4),
-                  Text(result.categorie, style: TextStyle(fontFamily: AppFonts.spaceGrotesk, fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.inkPrimary)),
-                ],
-              ),
-            ),
-            CategoryBadge(category: result.categorie),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Divider(color: AppColors.white10, height: 1),
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Prix estimé', style: TextStyle(fontFamily: AppFonts.inter, fontSize: 11, color: AppColors.inkTertiary)),
-                  const SizedBox(height: 2),
-                  Text('${fmt.format(prixTnd)}/kg', style: TextStyle(fontFamily: AppFonts.spaceGrotesk, fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.inkPrimary)),
-                ],
-              ),
-            ),
-            if (result.clusterId != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Cluster', style: TextStyle(fontFamily: AppFonts.inter, fontSize: 11, color: AppColors.inkTertiary)),
-                  const SizedBox(height: 2),
-                  Text('#${result.clusterId}', style: TextStyle(fontFamily: AppFonts.spaceGrotesk, fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.inkPrimary)),
-                ],
-              ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        ConfidenceBar(confidence: result.confidence, color: catColor, label: 'Certitude', trackColor: AppColors.white10),
-      ],
-    );
-  }
-}
-
-class _ShimmerResult extends StatefulWidget {
-  const _ShimmerResult();
-  @override
-  State<_ShimmerResult> createState() => _ShimmerResultState();
-}
-
-class _ShimmerResultState extends State<_ShimmerResult> with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.3, end: 0.7).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Widget _box({double width = double.infinity, double height = 14}) => AnimatedBuilder(
-        animation: _opacity,
-        builder: (_, __) => Opacity(
-          opacity: _opacity.value,
-          child: Container(
-            width: width,
-            height: height,
-            decoration: BoxDecoration(color: AppColors.white10, borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _box(width: 90, height: 10),
-          const SizedBox(height: 8),
-          _box(width: 160, height: 24),
-          const SizedBox(height: 16),
-          _box(height: 14),
-          const SizedBox(height: 10),
-          _box(height: 6),
-        ],
-      );
-}
-
-// ────────────────────────────────────────────────────────────────
-// SHAP Waterfall — Animated feature contribution bars
-// ────────────────────────────────────────────────────────────────
-class _ShapWaterfall extends StatelessWidget {
-  const _ShapWaterfall({required this.contributions});
-  final List<Map<String, dynamic>> contributions;
-
-  @override
-  Widget build(BuildContext context) {
-    return EcoCard(
-      glowColor: AppColors.mlopsBlue,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.insights_rounded, size: 16, color: AppColors.mlopsBlue),
-              const SizedBox(width: 8),
-              Text(
-                'Contribution des features',
-                style: TextStyle(
-                  fontFamily: AppFonts.inter,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ...contributions.take(6).map((c) {
-            final feature = c['feature'] as String? ?? '';
-            final contribution = (c['contribution'] as num?)?.toDouble() ?? 0;
-            final barFraction = (contribution / 100).clamp(0.0, 1.0);
-            final color = contribution > 20
-                ? AppColors.ecoGreen
-                : contribution > 10
-                    ? AppColors.mlopsBlue
-                    : AppColors.inkTertiary;
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        feature,
-                        style: TextStyle(
-                          fontFamily: AppFonts.inter,
-                          fontSize: 11,
-                          color: AppColors.inkSecondary,
-                        ),
-                      ),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: contribution),
-                        duration: const Duration(milliseconds: 800),
-                        curve: Curves.easeOutCubic,
-                        builder: (_, v, __) => Text(
-                          '${v.toStringAsFixed(1)}%',
-                          style: TextStyle(
-                            fontFamily: AppFonts.spaceGrotesk,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: color,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: barFraction),
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.easeOutCubic,
-                    builder: (_, v, __) => Stack(
-                      children: [
-                        Container(
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: color.withAlpha(20),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: v,
-                          child: Container(
-                            height: 5,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [color.withAlpha(140), color],
-                              ),
-                              borderRadius: BorderRadius.circular(3),
-                              boxShadow: [
-                                BoxShadow(color: color.withAlpha(30), blurRadius: 4),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-// ────────────────────────────────────────────────────────────────
-// Environmental Impact Calculator
-// ────────────────────────────────────────────────────────────────
-class _ImpactCard extends StatelessWidget {
-  const _ImpactCard({required this.categorie});
-  final String categorie;
-
-  // Approximate impact values per category (per item)
-  static const _co2Saved = {
-    'Plastique': 1.5, 'Papier': 0.9, 'Verre': 0.6, 'Métal': 2.3,
-  };
-  static const _waterSaved = {
-    'Plastique': 12.0, 'Papier': 26.0, 'Verre': 3.0, 'Métal': 18.0,
-  };
-  static const _landfillDiverted = {
-    'Plastique': 0.8, 'Papier': 0.5, 'Verre': 1.2, 'Métal': 1.5,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final co2 = _co2Saved[categorie] ?? 1.0;
-    final water = _waterSaved[categorie] ?? 10.0;
-    final landfill = _landfillDiverted[categorie] ?? 0.5;
-
-    return EcoCard(
-      glowColor: AppColors.ecoGreen,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.eco_rounded, size: 16, color: AppColors.ecoGreen),
-              const SizedBox(width: 8),
-              Text(
-                'Impact du recyclage — $categorie',
-                style: TextStyle(
-                  fontFamily: AppFonts.inter,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _ImpactMetric(
-                  icon: Icons.cloud_outlined,
-                  value: co2,
-                  unit: 'kg',
-                  label: 'CO₂ économisé',
-                  color: AppColors.ecoGreen,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _ImpactMetric(
-                  icon: Icons.water_drop_outlined,
-                  value: water,
-                  unit: 'L',
-                  label: 'Eau préservée',
-                  color: AppColors.mlopsBlue,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _ImpactMetric(
-                  icon: Icons.delete_outline_rounded,
-                  value: landfill,
-                  unit: 'kg',
-                  label: 'Décharge évitée',
-                  color: AppColors.mlopsGold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ImpactMetric extends StatelessWidget {
-  const _ImpactMetric({
-    required this.icon,
-    required this.value,
-    required this.unit,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final double value;
-  final String unit;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withAlpha(20),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 16, color: color),
-        ),
-        const SizedBox(height: 8),
-        TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: value),
-          duration: const Duration(milliseconds: 1000),
-          curve: Curves.easeOutCubic,
-          builder: (_, v, __) => Text(
-            '${v.toStringAsFixed(1)} $unit',
-            style: TextStyle(
-              fontFamily: AppFonts.spaceGrotesk,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: AppFonts.inter,
-            fontSize: 9,
-            color: AppColors.inkTertiary,
-          ),
-        ),
-      ],
     );
   }
 }

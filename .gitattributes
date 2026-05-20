@@ -1,0 +1,7 @@
+# Normalize line endings to LF on commit (fixes Black CI failures on Windows repos)
+* text=auto eol=lf
+*.png binary
+*.pkl binary
+*.wasm binary
+*.jpg binary
+*.ico binary

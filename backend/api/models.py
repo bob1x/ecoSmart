@@ -35,9 +35,7 @@ def try_mlflow_or_pkl(registry_name: str, pkl_path: str):
     try:
         import mlflow
 
-        tracking_db = (
-            "sqlite:///" + os.path.join(ROOT, "mlruns.db").replace("\\", "/")
-        )
+        tracking_db = "sqlite:///" + os.path.join(ROOT, "mlruns.db").replace("\\", "/")
         mlflow.set_tracking_uri(tracking_db)
         model_uri = f"models:/{registry_name}/latest"
         model = mlflow.sklearn.load_model(model_uri)
@@ -82,19 +80,13 @@ def load_all_models() -> None:
         models["reg_features"] = None
 
     # KMeans
-    models["kmeans"] = load_pickle(
-        os.path.join(MODELS_DIR, "kmeans_best.pkl")
-    )
+    models["kmeans"] = load_pickle(os.path.join(MODELS_DIR, "kmeans_best.pkl"))
     print(f"  [OK] Loaded KMeans (k={models['kmeans'].n_clusters})")
 
     # NLP model + vectorizer
     nlp_dir = os.path.join(MODELS_DIR, "nlp")
-    models["nlp_info"] = load_pickle(
-        os.path.join(nlp_dir, "nlp_model_best.pkl")
-    )
-    models["nlp_vectorizer"] = load_pickle(
-        os.path.join(nlp_dir, "vectorizer_best.pkl")
-    )
+    models["nlp_info"] = load_pickle(os.path.join(nlp_dir, "nlp_model_best.pkl"))
+    models["nlp_vectorizer"] = load_pickle(os.path.join(nlp_dir, "vectorizer_best.pkl"))
     models["nlp_label_encoder"] = load_pickle(
         os.path.join(nlp_dir, "label_encoder.pkl")
     )

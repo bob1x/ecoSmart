@@ -8,7 +8,9 @@ Text preprocessing for Rapport_Collecte column.
 - lemmatize
 """
 
-import re, warnings
+import re
+import warnings
+
 import spacy
 
 warnings.filterwarnings("ignore")
@@ -18,6 +20,7 @@ DOMAIN_STOPWORDS = {"dechet", "collecte", "rapport", "materiau", "echantillon"}
 
 # Load French model (lazy singleton)
 _nlp = None
+
 
 def _get_nlp():
     global _nlp
@@ -31,8 +34,8 @@ def clean_text(text):
     if not isinstance(text, str) or not text.strip():
         return ""
     text = text.lower()
-    text = re.sub(r"[^\w\s]", " ", text)   # punctuation -> space
-    text = re.sub(r"\d+", " ", text)        # digits -> space
+    text = re.sub(r"[^\w\s]", " ", text)  # punctuation -> space
+    text = re.sub(r"\d+", " ", text)  # digits -> space
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
@@ -56,10 +59,12 @@ def preprocess(text):
     for token in doc:
         lemma = token.lemma_.lower().strip()
         # skip if empty, stopword, single char, or domain stopword
-        if (not lemma
-                or lemma in spacy_stops
-                or lemma in DOMAIN_STOPWORDS
-                or len(lemma) <= 1):
+        if (
+            not lemma
+            or lemma in spacy_stops
+            or lemma in DOMAIN_STOPWORDS
+            or len(lemma) <= 1
+        ):
             continue
         tokens.append(lemma)
 
@@ -73,7 +78,9 @@ def preprocess_series(series):
 
 # ---- quick smoke test when run directly ----
 if __name__ == "__main__":
-    import sys; sys.stdout.reconfigure(encoding="utf-8")
+    import sys
+
+    sys.stdout.reconfigure(encoding="utf-8")
     sample = (
         "Lot de papier recupere dans un site non renseigne. "
         "Poids leger de 16.7 kg, volume moyen. "

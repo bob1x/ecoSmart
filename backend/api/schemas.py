@@ -4,8 +4,8 @@ api/schemas.py — Pydantic v2 models for all API endpoints
 """
 
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 # ──────────────────────────── Inputs ────────────────────────────
 

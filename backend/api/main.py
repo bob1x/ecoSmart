@@ -16,14 +16,15 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from api.metrics_tracker import record_request
 from api.models import MODEL_VERSION, ROOT, load_all_models, models
+from api.routes.export import router as export_router
+from api.routes.feedback import router as feedback_router
+from api.routes.mlops import router as mlops_router
+from api.routes.predict import router as predict_router
+from api.routes.prometheus import router as prometheus_router
 from api.schemas import HealthResponse
 from api.services import init_feedback_db
-from api.metrics_tracker import record_request
-from api.routes.predict import router as predict_router
-from api.routes.feedback import router as feedback_router
-from api.routes.export import router as export_router
-from api.routes.mlops import router as mlops_router
 
 warnings.filterwarnings("ignore")
 
@@ -89,6 +90,7 @@ app.include_router(predict_router)
 app.include_router(feedback_router)
 app.include_router(export_router)
 app.include_router(mlops_router)
+app.include_router(prometheus_router)
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -99,7 +101,11 @@ async def health():
 
 # ──────────────────────── Static Files (Flutter Web) ───
 if os.path.isdir(STATIC_DIR):
-    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="flutter_assets")
+    app.mount(
+        "/assets",
+        StaticFiles(directory=os.path.join(STATIC_DIR, "assets")),
+        name="flutter_assets",
+    )
 
     @app.get("/{full_path:path}")
     async def serve_spa(request: Request, full_path: str):

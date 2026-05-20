@@ -11,13 +11,8 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
-from api.models import (
-    CATEGORIES,
-    FEEDBACK_DB,
-    MODEL_VERSION,
-    RECYCLABILITY,
-    models,
-)
+from api.models import (CATEGORIES, FEEDBACK_DB, MODEL_VERSION, RECYCLABILITY,
+                        models)
 
 router = APIRouter(tags=["export"])
 
@@ -36,7 +31,9 @@ async def export_feedback_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["id", "predicted_label", "correct_label", "is_correct", "created_at"])
+    writer.writerow(
+        ["id", "predicted_label", "correct_label", "is_correct", "created_at"]
+    )
     for row in rows:
         writer.writerow(row)
 
@@ -68,7 +65,13 @@ async def export_pdf_report():
     pdf.cell(0, 15, "EcoSmart Classifier", ln=True, align="C")
     pdf.set_font("Helvetica", "", 12)
     pdf.cell(0, 8, "Performance Report", ln=True, align="C")
-    pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align="C")
+    pdf.cell(
+        0,
+        8,
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        ln=True,
+        align="C",
+    )
     pdf.ln(10)
 
     # Model overview
@@ -80,7 +83,10 @@ async def export_pdf_report():
         ("Categories", ", ".join(CATEGORIES)),
         ("Classifier", type(models.get("classifier", "N/A")).__name__),
         ("Regressor", type(models.get("regressor", "N/A")).__name__),
-        ("NLP Model", type(models.get("nlp_info", {}).get("classifier", "N/A")).__name__),
+        (
+            "NLP Model",
+            type(models.get("nlp_info", {}).get("classifier", "N/A")).__name__,
+        ),
     ]
 
     for label, value in model_info:
@@ -110,7 +116,9 @@ async def export_pdf_report():
             pdf.cell(50, 6, f"  {imp:.4f}", border=1, ln=True)
     else:
         pdf.set_font("Helvetica", "", 10)
-        pdf.cell(0, 7, "  Feature importances not available for this model type.", ln=True)
+        pdf.cell(
+            0, 7, "  Feature importances not available for this model type.", ln=True
+        )
 
     pdf.ln(6)
 
@@ -153,9 +161,12 @@ async def export_pdf_report():
     pdf.set_font("Helvetica", "B", 14)
     pdf.cell(0, 10, "4. EcoScore Formula", ln=True)
     pdf.set_font("Helvetica", "", 10)
-    pdf.multi_cell(0, 6,
+    pdf.multi_cell(
+        0,
+        6,
         "EcoScore = clamp(recyclability_weight x confidence x 80 + min(|price| / 20, 20), 0, 100)\n"
-        f"Recyclability weights: {json.dumps(RECYCLABILITY)}")
+        f"Recyclability weights: {json.dumps(RECYCLABILITY)}",
+    )
 
     # Output
     buf = io.BytesIO()

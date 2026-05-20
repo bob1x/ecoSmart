@@ -7,8 +7,8 @@ tests/test_nlp.py — NLP pipeline tests
 - Digits and punctuation removed
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -17,7 +17,7 @@ import pickle
 import numpy as np
 import pytest
 
-from src.nlp.preprocess import preprocess, _get_nlp, DOMAIN_STOPWORDS
+from src.nlp.preprocess import DOMAIN_STOPWORDS, _get_nlp, preprocess
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 NLP_DIR = os.path.join(ROOT, "models", "nlp")

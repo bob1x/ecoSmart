@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import yaml
-from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.impute import KNNImputer, SimpleImputer
 
 warnings.filterwarnings("ignore")
 

@@ -7,33 +7,39 @@ Pipeline : StandardScaler -> KMeans (k=2..10) -> Elbow + Silhouette
 Logging  : MLflow experiment "clustering-kmeans"
 """
 
-import os, sys, time, warnings, pickle, json
+import json
+import os
+import pickle
+import sys
+import time
+import warnings
+
+import matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import seaborn as sns
-
-from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from sklearn.decomposition import PCA
 import mlflow
+import seaborn as sns
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
 
 warnings.filterwarnings("ignore")
 
 # ------------------------------------------------------------------ paths
-ROOT       = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-RAW_CSV    = os.path.join(ROOT, "dataset_ProjetML_2026.csv")
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RAW_CSV = os.path.join(ROOT, "dataset_ProjetML_2026.csv")
 MODELS_DIR = os.path.join(ROOT, "models")
-ART_DIR    = os.path.join(MODELS_DIR, "clustering_artifacts")
+ART_DIR = os.path.join(MODELS_DIR, "clustering_artifacts")
 os.makedirs(ART_DIR, exist_ok=True)
 
-EXPERIMENT   = "clustering-kmeans"
+EXPERIMENT = "clustering-kmeans"
 RANDOM_STATE = 42
-K_RANGE      = range(2, 11)  # k = 2 .. 10
+K_RANGE = range(2, 11)  # k = 2 .. 10
 
 # Numeric feature columns (unsupervised -- drop Categorie entirely)
 NUM_COLS = ["Poids", "Volume", "Conductivite", "Opacite", "Rigidite", "Prix_Revente"]
@@ -65,9 +71,9 @@ def load_and_prepare():
 # ---------------------------------------------- elbow + silhouette search
 def search_k(X_scaled):
     """Run KMeans for k=2..10, collect inertia and silhouette scores."""
-    inertias    = []
+    inertias = []
     silhouettes = []
-    models      = {}
+    models = {}
 
     for k in K_RANGE:
         km = KMeans(n_clusters=k, random_state=RANDOM_STATE, n_init=10, max_iter=300)
@@ -131,9 +137,9 @@ def select_optimal_k(silhouettes):
     ---------------------------------------------------------------
     """
     sil_array = np.array(silhouettes)
-    best_idx  = int(np.argmax(sil_array))
-    best_k    = list(K_RANGE)[best_idx]
-    best_sil  = sil_array[best_idx]
+    best_idx = int(np.argmax(sil_array))
+    best_k = list(K_RANGE)[best_idx]
+    best_sil = sil_array[best_idx]
     return best_k, best_sil
 
 
@@ -147,10 +153,14 @@ def plot_pca_clusters(X_scaled, labels, k, path):
     palette = sns.color_palette("Set2", n_colors=k)
     for cluster_id in range(k):
         mask = labels == cluster_id
-        ax.scatter(X2d[mask, 0], X2d[mask, 1],
-                   label=f"Cluster {cluster_id}",
-                   color=palette[cluster_id],
-                   alpha=0.5, s=12)
+        ax.scatter(
+            X2d[mask, 0],
+            X2d[mask, 1],
+            label=f"Cluster {cluster_id}",
+            color=palette[cluster_id],
+            alpha=0.5,
+            s=12,
+        )
     ax.set_xlabel(f"PC1 ({pca.explained_variance_ratio_[0]*100:.1f}% var)")
     ax.set_ylabel(f"PC2 ({pca.explained_variance_ratio_[1]*100:.1f}% var)")
     ax.set_title(f"KMeans Clusters (k={k}) -- PCA 2D projection")
@@ -180,13 +190,13 @@ def interpret_clusters(df_num, labels, k):
     # We label each cluster based on which features are notably high/low
     # relative to the overall mean.
     overall_mean = df_num[NUM_COLS].mean()
-    overall_std  = df_num[NUM_COLS].std()
+    overall_std = df_num[NUM_COLS].std()
 
     semantic_labels = {}
     print("\n  Cluster semantic labels:")
     for cid in range(k):
         row = cluster_means.loc[cid]
-        z   = (row - overall_mean) / overall_std  # z-score vs global
+        z = (row - overall_mean) / overall_std  # z-score vs global
 
         descriptors = []
         # Weight
@@ -232,7 +242,9 @@ def interpret_clusters(df_num, labels, k):
 
 # ================================================================ main
 def main():
-    import sys; sys.stdout.reconfigure(encoding="utf-8")
+    import sys
+
+    sys.stdout.reconfigure(encoding="utf-8")
 
     print("=" * 60)
     print("MODULE 3 - Clustering (unsupervised KMeans)")
@@ -270,8 +282,8 @@ def main():
     print(f"  Justification: k={best_k} has the highest silhouette score")
     print(f"  among k=2..10, indicating the best-separated clusters.")
 
-    best_km  = km_models[best_k]
-    labels   = best_km.predict(X_scaled)
+    best_km = km_models[best_k]
+    labels = best_km.predict(X_scaled)
 
     # =================== Phase 3: PCA plot ============================
     print("\n" + "-" * 50)
@@ -320,7 +332,9 @@ def main():
             "inertia": round(best_km.inertia_, 2),
             "cluster_means": cluster_means.round(4).to_dict(),
             "semantic_labels": semantic_labels,
-            "all_silhouettes": {int(k): round(s, 4) for k, s in zip(K_RANGE, silhouettes)},
+            "all_silhouettes": {
+                int(k): round(s, 4) for k, s in zip(K_RANGE, silhouettes)
+            },
         }
         summary_path = os.path.join(ART_DIR, "cluster_summary.json")
         with open(summary_path, "w", encoding="utf-8") as f:

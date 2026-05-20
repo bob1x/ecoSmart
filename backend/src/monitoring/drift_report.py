@@ -8,16 +8,16 @@ src/monitoring/drift_report.py — Data & model drift detection
 5. Logs drift metrics to MLflow
 """
 
+import json
 import os
 import sys
-import json
 import warnings
 
+import mlflow
 import numpy as np
 import pandas as pd
 import yaml
 from scipy.spatial.distance import jensenshannon
-import mlflow
 
 warnings.filterwarnings("ignore")
 
@@ -87,11 +87,13 @@ def main():
     drift_results = {}
 
     try:
-        from evidently.report import Report
         from evidently.metric_preset import DataDriftPreset, DataQualityPreset
+        from evidently.report import Report
 
         # Numeric columns only for drift
-        num_cols_present = [c for c in NUM_COLS if c in ref_data.columns and c in cur_data.columns]
+        num_cols_present = [
+            c for c in NUM_COLS if c in ref_data.columns and c in cur_data.columns
+        ]
 
         print("\n--- DataDriftPreset ---")
         drift_report = Report(metrics=[DataDriftPreset()])

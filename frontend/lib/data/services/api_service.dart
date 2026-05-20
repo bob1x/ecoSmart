@@ -120,6 +120,11 @@ class ApiService {
     return _get('/mlops/metrics');
   }
 
+  /// Fetch Prometheus time-series metrics (request rate, latency, etc.)
+  Future<Map<String, dynamic>> fetchPrometheusMetrics() async {
+    return _get('/mlops/prometheus-metrics');
+  }
+
   // ── HTTP helpers ──────────────────────────────────────────────
 
   Future<Map<String, dynamic>> _get(String path) async {

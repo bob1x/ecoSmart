@@ -7,39 +7,44 @@ Logs to MLflow experiment "nlp-classification".
 Saves best model to models/nlp/nlp_model_best.pkl
 """
 
-import os, sys, warnings, pickle
+import os
+import pickle
+import sys
+import warnings
+
+import matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import mlflow
+import mlflow.sklearn
 import seaborn as sns
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import LinearSVC
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (accuracy_score, f1_score,
-                             confusion_matrix, classification_report)
 from scipy.sparse import issparse
-import mlflow, mlflow.sklearn
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (accuracy_score, classification_report,
+                             confusion_matrix, f1_score)
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.preprocessing import LabelEncoder
+from sklearn.svm import LinearSVC
 
 warnings.filterwarnings("ignore")
 
-ROOT     = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-RAW_CSV  = os.path.join(ROOT, "dataset_ProjetML_2026.csv")
-NLP_DIR  = os.path.join(ROOT, "models", "nlp")
-ART_DIR  = os.path.join(NLP_DIR, "artifacts")
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RAW_CSV = os.path.join(ROOT, "dataset_ProjetML_2026.csv")
+NLP_DIR = os.path.join(ROOT, "models", "nlp")
+ART_DIR = os.path.join(NLP_DIR, "artifacts")
 os.makedirs(ART_DIR, exist_ok=True)
 
 sys.path.insert(0, ROOT)
 from src.nlp.preprocess import preprocess_series
 
-EXPERIMENT   = "nlp-classification"
+EXPERIMENT = "nlp-classification"
 RANDOM_STATE = 42
-TEST_SIZE    = 0.20
+TEST_SIZE = 0.20
 
 
 def load_best_vectorizer():
@@ -51,7 +56,7 @@ def load_best_vectorizer():
 def vectorize_texts(joined, token_lists, vec_info):
     """Transform texts using the saved vectorizer."""
     vtype = vec_info["type"]
-    vec   = vec_info["vec"]
+    vec = vec_info["vec"]
     if vtype == "sklearn":
         return vec.transform(joined)
     else:
@@ -66,11 +71,21 @@ def vectorize_texts(joined, token_lists, vec_info):
 
 def save_cm(cm, classes, name, path):
     fig, ax = plt.subplots(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                xticklabels=classes, yticklabels=classes, ax=ax)
-    ax.set_xlabel("Predicted"); ax.set_ylabel("Actual")
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=classes,
+        yticklabels=classes,
+        ax=ax,
+    )
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
     ax.set_title(f"Confusion Matrix - {name}")
-    fig.tight_layout(); fig.savefig(path, dpi=120); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
 
 
 def main():
@@ -118,11 +133,12 @@ def main():
     is_sparse = issparse(X_tr)
     models = {}
     models["LogisticRegression"] = LogisticRegression(
-        max_iter=1000, random_state=RANDOM_STATE, n_jobs=-1)
-    models["LinearSVC"] = LinearSVC(
-        max_iter=2000, random_state=RANDOM_STATE)
+        max_iter=1000, random_state=RANDOM_STATE, n_jobs=-1
+    )
+    models["LinearSVC"] = LinearSVC(max_iter=2000, random_state=RANDOM_STATE)
     models["RandomForest"] = RandomForestClassifier(
-        n_estimators=200, random_state=RANDOM_STATE, n_jobs=-1)
+        n_estimators=200, random_state=RANDOM_STATE, n_jobs=-1
+    )
     # MultinomialNB only works with non-negative features (BoW/TF-IDF)
     if is_sparse:
         models["MultinomialNB"] = MultinomialNB()
@@ -133,8 +149,8 @@ def main():
         clf.fit(X_tr, y_tr)
         preds = clf.predict(X_te)
         acc = accuracy_score(y_te, preds)
-        f1  = f1_score(y_te, preds, average="macro")
-        cm  = confusion_matrix(y_te, preds)
+        f1 = f1_score(y_te, preds, average="macro")
+        cm = confusion_matrix(y_te, preds)
         rep = classification_report(y_te, preds, target_names=classes)
         results[name] = {"acc": acc, "f1": f1, "cm": cm, "report": rep, "clf": clf}
 
@@ -158,7 +174,7 @@ def main():
 
     # best
     best_name = max(results, key=lambda k: results[k]["f1"])
-    best_clf  = results[best_name]["clf"]
+    best_clf = results[best_name]["clf"]
     print(f"\nBest: {best_name}  (F1={results[best_name]['f1']:.4f})")
     print(f"\nClassification report ({best_name}):")
     print(results[best_name]["report"])
@@ -166,8 +182,9 @@ def main():
     # save best
     best_path = os.path.join(NLP_DIR, "nlp_model_best.pkl")
     with open(best_path, "wb") as f:
-        pickle.dump({"classifier": best_clf, "name": best_name,
-                      "vectorizer": vec_name}, f)
+        pickle.dump(
+            {"classifier": best_clf, "name": best_name, "vectorizer": vec_name}, f
+        )
     print(f"Saved -> {best_path}")
 
     print("\n" + "=" * 60)

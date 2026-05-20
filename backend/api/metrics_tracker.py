@@ -59,7 +59,7 @@ def get_stats() -> Dict[str, Any]:
     if lats:
         bucket_size = max(1, len(lats) // 20)
         for i in range(0, len(lats), bucket_size):
-            bucket = lats[i:i + bucket_size]
+            bucket = lats[i : i + bucket_size]
             trend.append(round(sum(bucket) / len(bucket), 1))
         trend = trend[-20:]  # keep last 20 points
 

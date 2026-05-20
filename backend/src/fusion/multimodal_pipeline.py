@@ -8,43 +8,49 @@ Logs best to MLflow as "multimodal-waste-classifier".
 SHAP summary plot for best model.
 """
 
-import os, sys, warnings, pickle, time
+import os
+import pickle
+import sys
+import time
+import warnings
+
+import matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import mlflow
+import mlflow.sklearn
 import seaborn as sns
-
-from scipy.sparse import hstack, csr_matrix
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.impute import SimpleImputer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import LinearSVC
-from sklearn.metrics import (accuracy_score, f1_score,
-                             confusion_matrix, classification_report)
-from xgboost import XGBClassifier
 import shap
-import mlflow, mlflow.sklearn
+from scipy.sparse import csr_matrix, hstack
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (accuracy_score, classification_report,
+                             confusion_matrix, f1_score)
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.svm import LinearSVC
+from xgboost import XGBClassifier
 
 warnings.filterwarnings("ignore")
 
-ROOT     = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-RAW_CSV  = os.path.join(ROOT, "dataset_ProjetML_2026.csv")
-MOD_DIR  = os.path.join(ROOT, "models", "fusion")
-ART_DIR  = os.path.join(MOD_DIR, "artifacts")
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RAW_CSV = os.path.join(ROOT, "dataset_ProjetML_2026.csv")
+MOD_DIR = os.path.join(ROOT, "models", "fusion")
+ART_DIR = os.path.join(MOD_DIR, "artifacts")
 os.makedirs(ART_DIR, exist_ok=True)
 
 sys.path.insert(0, ROOT)
 from src.nlp.preprocess import preprocess_series
 
-EXPERIMENT   = "multimodal-fusion"
-REGISTRY     = "multimodal-waste-classifier"
+EXPERIMENT = "multimodal-fusion"
+REGISTRY = "multimodal-waste-classifier"
 RANDOM_STATE = 42
-TEST_SIZE    = 0.20
-NUM_COLS     = ["Poids", "Volume", "Conductivite", "Opacite", "Rigidite", "Prix_Revente"]
+TEST_SIZE = 0.20
+NUM_COLS = ["Poids", "Volume", "Conductivite", "Opacite", "Rigidite", "Prix_Revente"]
 
 
 # -------------------------------------------------------- data
@@ -59,8 +65,7 @@ def prepare_features(df):
     # --- numeric pipeline ---
     X_num = df[NUM_COLS].copy()
     imp = SimpleImputer(strategy="median")
-    X_num = pd.DataFrame(imp.fit_transform(X_num), columns=NUM_COLS,
-                         index=df.index)
+    X_num = pd.DataFrame(imp.fit_transform(X_num), columns=NUM_COLS, index=df.index)
     scaler = StandardScaler()
     X_num_scaled = scaler.fit_transform(X_num)
 
@@ -87,11 +92,21 @@ def fuse(X_num, X_text, nlp_weight=1.0):
 
 def save_cm(cm, classes, name, path):
     fig, ax = plt.subplots(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                xticklabels=classes, yticklabels=classes, ax=ax)
-    ax.set_xlabel("Predicted"); ax.set_ylabel("Actual")
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=classes,
+        yticklabels=classes,
+        ax=ax,
+    )
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
     ax.set_title(f"Confusion Matrix - {name}")
-    fig.tight_layout(); fig.savefig(path, dpi=120); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
 
 
 def save_shap_plot(model, X, path):
@@ -100,7 +115,8 @@ def save_shap_plot(model, X, path):
     # subsample for speed
     if X_dense.shape[0] > 500:
         idx = np.random.RandomState(RANDOM_STATE).choice(
-            X_dense.shape[0], 500, replace=False)
+            X_dense.shape[0], 500, replace=False
+        )
         X_dense = X_dense[idx]
     explainer = shap.Explainer(model, X_dense)
     shap_values = explainer(X_dense)
@@ -132,8 +148,8 @@ def main():
 
     # two weighting strategies
     strategies = {
-        "equal":   1.0,
-        "nlp_x2":  2.0,
+        "equal": 1.0,
+        "nlp_x2": 2.0,
     }
 
     all_results = {}
@@ -145,19 +161,22 @@ def main():
 
         X_fused = fuse(X_num, X_text, nlp_weight=weight)
         X_tr, X_te, y_tr, y_te = train_test_split(
-            X_fused, y, test_size=TEST_SIZE,
-            random_state=RANDOM_STATE, stratify=y
+            X_fused, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
         )
 
         models = {
             "LogisticRegression": LogisticRegression(
-                max_iter=1000, random_state=RANDOM_STATE, n_jobs=-1),
-            "LinearSVC": LinearSVC(
-                max_iter=2000, random_state=RANDOM_STATE),
+                max_iter=1000, random_state=RANDOM_STATE, n_jobs=-1
+            ),
+            "LinearSVC": LinearSVC(max_iter=2000, random_state=RANDOM_STATE),
             "XGBoost": XGBClassifier(
-                n_estimators=200, use_label_encoder=False,
-                eval_metric="mlogloss", random_state=RANDOM_STATE,
-                n_jobs=-1, verbosity=0),
+                n_estimators=200,
+                use_label_encoder=False,
+                eval_metric="mlogloss",
+                random_state=RANDOM_STATE,
+                n_jobs=-1,
+                verbosity=0,
+            ),
         }
 
         for name, clf in models.items():
@@ -166,14 +185,19 @@ def main():
             tt = time.time() - t0
             preds = clf.predict(X_te)
             acc = accuracy_score(y_te, preds)
-            f1  = f1_score(y_te, preds, average="macro")
-            cm  = confusion_matrix(y_te, preds)
+            f1 = f1_score(y_te, preds, average="macro")
+            cm = confusion_matrix(y_te, preds)
 
             run_label = f"{strat_name}_{name}"
             all_results[run_label] = {
-                "clf": clf, "acc": acc, "f1": f1, "cm": cm,
-                "strat": strat_name, "weight": weight,
-                "X_te": X_te, "y_te": y_te,
+                "clf": clf,
+                "acc": acc,
+                "f1": f1,
+                "cm": cm,
+                "strat": strat_name,
+                "weight": weight,
+                "X_te": X_te,
+                "y_te": y_te,
             }
 
             # confusion matrix png
@@ -201,9 +225,9 @@ def main():
     print(f"Best: {best_label}  (F1={best['f1']:.4f})")
 
     # classification report
-    rep = classification_report(best["y_te"],
-                                best["clf"].predict(best["X_te"]),
-                                target_names=classes)
+    rep = classification_report(
+        best["y_te"], best["clf"].predict(best["X_te"]), target_names=classes
+    )
     print(rep)
 
     # SHAP
@@ -235,8 +259,9 @@ def main():
     # save pkl
     best_pkl = os.path.join(MOD_DIR, "multimodal_best.pkl")
     with open(best_pkl, "wb") as f:
-        pickle.dump({"clf": best["clf"], "label": best_label,
-                      "weight": best["weight"]}, f)
+        pickle.dump(
+            {"clf": best["clf"], "label": best_label, "weight": best["weight"]}, f
+        )
     print(f"Saved -> {best_pkl}")
 
     print("\n" + "=" * 60)

@@ -10,9 +10,9 @@ tests/test_data.py — Data pipeline tests
 import os
 import sys
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -86,18 +86,16 @@ class TestCleaning:
         for col in NUMERIC_COLUMNS:
             if col in cleaned_df.columns:
                 n_nan = cleaned_df[col].isna().sum()
-                assert n_nan == 0, (
-                    f"Column '{col}' has {n_nan} NaN values after cleaning"
-                )
+                assert (
+                    n_nan == 0
+                ), f"Column '{col}' has {n_nan} NaN values after cleaning"
 
     def test_no_negative_physical_values(self, cleaned_df):
         """No negative values in Poids, Volume, Prix_Revente."""
         for col in ["Poids", "Volume", "Prix_Revente"]:
             if col in cleaned_df.columns:
                 n_neg = (cleaned_df[col] < 0).sum()
-                assert n_neg == 0, (
-                    f"Column '{col}' has {n_neg} negative values"
-                )
+                assert n_neg == 0, f"Column '{col}' has {n_neg} negative values"
 
 
 class TestSplit:
@@ -120,23 +118,19 @@ class TestSplit:
         val_pct = n_val / total * 100
         test_pct = n_test / total * 100
 
-        assert abs(train_pct - 70) <= 1.0, (
-            f"Train ratio {train_pct:.1f}% not within ±1% of 70%"
-        )
-        assert abs(val_pct - 15) <= 1.0, (
-            f"Val ratio {val_pct:.1f}% not within ±1% of 15%"
-        )
-        assert abs(test_pct - 15) <= 1.0, (
-            f"Test ratio {test_pct:.1f}% not within ±1% of 15%"
-        )
+        assert (
+            abs(train_pct - 70) <= 1.0
+        ), f"Train ratio {train_pct:.1f}% not within ±1% of 70%"
+        assert (
+            abs(val_pct - 15) <= 1.0
+        ), f"Val ratio {val_pct:.1f}% not within ±1% of 15%"
+        assert (
+            abs(test_pct - 15) <= 1.0
+        ), f"Test ratio {test_pct:.1f}% not within ±1% of 15%"
 
     def test_no_data_leakage(self, split_dfs):
         """No row duplication across splits (check by index count)."""
-        total = (
-            len(split_dfs["train"])
-            + len(split_dfs["val"])
-            + len(split_dfs["test"])
-        )
+        total = len(split_dfs["train"]) + len(split_dfs["val"]) + len(split_dfs["test"])
         combined = pd.concat(
             [split_dfs["train"], split_dfs["val"], split_dfs["test"]],
             ignore_index=True,

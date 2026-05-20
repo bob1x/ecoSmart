@@ -7,12 +7,12 @@ tests/test_model.py — Model quality tests
 """
 
 import os
-import sys
 import pickle
+import sys
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -74,10 +74,10 @@ class TestClassifier:
         if not os.path.exists(self.PKL_PATH):
             pytest.skip("classifier_best.pkl not found")
 
-        from sklearn.model_selection import train_test_split
-        from sklearn.preprocessing import LabelEncoder, StandardScaler
         from sklearn.impute import SimpleImputer
         from sklearn.metrics import accuracy_score
+        from sklearn.model_selection import train_test_split
+        from sklearn.preprocessing import LabelEncoder, StandardScaler
 
         model = load_pickle(self.PKL_PATH)
         df = pd.read_csv(RAW_CSV).copy()

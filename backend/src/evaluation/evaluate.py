@@ -7,26 +7,20 @@ Outputs: reports/evaluation.json
 Logs metrics to MLflow.
 """
 
-import os
-import sys
 import json
-import warnings
+import os
 import pickle
+import sys
+import warnings
 
+import mlflow
 import numpy as np
 import pandas as pd
 import yaml
-import mlflow
-from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import (
-    accuracy_score,
-    f1_score,
-    mean_squared_error,
-    mean_absolute_error,
-    r2_score,
-    classification_report,
-)
+from sklearn.metrics import (accuracy_score, classification_report, f1_score,
+                             mean_absolute_error, mean_squared_error, r2_score)
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 warnings.filterwarnings("ignore")
 
